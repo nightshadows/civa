@@ -1,2 +1,2 @@
 # civa
-Civilization A.
+Civilization A
