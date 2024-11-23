@@ -9,6 +9,7 @@ export class GameScene extends Phaser.Scene {
     private selectedUnit: Unit | null = null;
     private highlightedHexes: Phaser.GameObjects.Graphics[] = [];
     private hexGrid: HexGrid;
+    private selectedUnitSprite: Phaser.GameObjects.Graphics | null = null;
 
     constructor() {
         super({ key: 'GameScene' });
@@ -115,6 +116,8 @@ export class GameScene extends Phaser.Scene {
     }
 
     public renderMap(tiles: { type: TileType; position: Position }[], units: Unit[] = []): void {
+        this.clearSelection();  // Clear selection when re-rendering
+        
         this.children.removeAll();
 
         // Draw tiles first
@@ -128,6 +131,17 @@ export class GameScene extends Phaser.Scene {
             const pixelPos = this.hexGrid.hexToPixel(unit.position);
             this.drawUnit(unit, pixelPos.x, pixelPos.y);
         });
+
+        // Restore selection if needed
+        if (this.selectedUnit) {
+            const stillExists = units.find(u => u.id === this.selectedUnit?.id);
+            if (stillExists) {
+                this.highlightSelectedUnit(this.selectedUnit);
+                this.showMovementRange(this.selectedUnit);
+            } else {
+                this.selectedUnit = null;
+            }
+        }
     }
 
     private clearHighlights(): void {
@@ -138,11 +152,16 @@ export class GameScene extends Phaser.Scene {
     private showMovementRange(unit: Unit): void {
         this.clearHighlights();
         
-        // Get all hex coordinates within range
+        // Get all hex coordinates within movement range
         const movementHexes = this.hexGrid.getHexesInRange(unit.position, unit.movementPoints);
         
+        // Remove the unit's current position from the highlights
+        const reachableHexes = movementHexes.filter(hex => 
+            !(hex.x === unit.position.x && hex.y === unit.position.y)
+        );
+        
         // Draw highlights for each hex
-        movementHexes.forEach(hexPos => {
+        reachableHexes.forEach(hexPos => {
             const pixelPos = this.hexGrid.hexToPixel(hexPos);
             const highlight = this.drawHexHighlight(pixelPos.x, pixelPos.y);
             this.highlightedHexes.push(highlight);
@@ -173,29 +192,52 @@ export class GameScene extends Phaser.Scene {
         return highlight;
     }
 
-    private handleHexClick(pointer: Phaser.Input.Pointer): void {
-        // Convert screen coordinates to hex coordinates
-        const x = pointer.x;
-        const y = pointer.y;
+    private clearSelection(): void {
+        this.selectedUnit = null;
+        this.clearHighlights();
+        if (this.selectedUnitSprite) {
+            this.selectedUnitSprite.destroy();
+            this.selectedUnitSprite = null;
+        }
+    }
 
-        console.log('Hex clicked:', x, y);
+    private highlightSelectedUnit(unit: Unit): void {
+        // Clear any existing selection
+        if (this.selectedUnitSprite) {
+            this.selectedUnitSprite.destroy();
+        }
+
+        const pixelPos = this.hexGrid.hexToPixel(unit.position);
         
-        // Find clicked unit
-        const clickedUnit = this.findUnitAtPosition(x, y);
-        console.log('Clicked unit:', clickedUnit);
+        // Create a new highlight for the selected unit
+        const highlight = this.add.graphics();
+        highlight.lineStyle(3, 0x00ff00, 1);  // Thick green border
+        
+        // Draw circle around the unit
+        highlight.strokeCircle(pixelPos.x, pixelPos.y, this.hexSize - 5);
+        
+        this.selectedUnitSprite = highlight;
+    }
+
+    private handleHexClick(pointer: Phaser.Input.Pointer): void {
+        const clickedUnit = this.findUnitAtPosition(pointer.x, pointer.y);
         
         if (clickedUnit) {
-            // If unit belongs to player and has movement points
-            console.log('Clicked unit belongs to player:', clickedUnit.playerId === this.playerId);
-            console.log('My playerId:', this.playerId);
-            if (clickedUnit.playerId === this.playerId && clickedUnit.movementPoints > 0) {
-                this.selectedUnit = clickedUnit;
-                this.showMovementRange(clickedUnit);
+            // If clicking on a unit that belongs to the player
+            if (clickedUnit.playerId === this.playerId) {
+                // If clicking on the same unit that's already selected, deselect it
+                if (this.selectedUnit === clickedUnit) {
+                    this.clearSelection();
+                } else {
+                    // Select the new unit
+                    this.selectedUnit = clickedUnit;
+                    this.highlightSelectedUnit(clickedUnit);
+                    this.showMovementRange(clickedUnit);
+                }
             }
-        } else if (this.selectedUnit) {
-            // Handle movement to empty hex (to be implemented)
-            this.clearHighlights();
-            this.selectedUnit = null;
+        } else {
+            // Clicked on empty hex
+            this.clearSelection();
         }
     }
 

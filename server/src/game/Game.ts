@@ -76,7 +76,7 @@ export class Game {
         const units: Unit[] = [];
         this.players.forEach((playerId, index) => {
             // Place units at opposite corners for now
-            const baseX = index === 0 ? 5 : this.mapSize - 5;
+            const baseX = index === 0 ? 6 : this.mapSize - 5;
             const baseY = index === 0 ? 5 : this.mapSize - 5;
 
             units.push({
@@ -91,7 +91,7 @@ export class Game {
             units.push({
                 id: `archer-${playerId}`,
                 type: UnitType.ARCHER,
-                position: { x: baseX, y: baseY + 1 },
+                position: { x: baseX + 1, y: baseY },
                 playerId,
                 movementPoints: 2,
                 visionRange: 3
