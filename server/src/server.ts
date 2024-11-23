@@ -12,11 +12,11 @@ app.use(cors());
 // Serve static files from the client's public directory
 app.use(express.static(path.join(__dirname, '../../client/public')));
 
-const server = app.listen(3000, () => {
+const server = app.listen(3001, () => {
   console.log('Server running on http://localhost:3000');
 });
 
-const wss = new WebSocket.Server({ port: 8080 });
+const wss = new WebSocket.Server({ port: 3000 });
 
 const games = new Map<string, Game>();
 
