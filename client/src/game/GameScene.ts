@@ -18,8 +18,9 @@ export class GameScene extends Phaser.Scene {
         this.gameId = 'test-game';
     }
 
-    init(data: { socket: WebSocket }) {
+    init(data: { socket: WebSocket; playerId: string }) {
         this.socket = data.socket;
+        this.playerId = data.playerId;
         
         this.socket.addEventListener('message', (event) => {
             const data = JSON.parse(event.data);
@@ -28,6 +29,7 @@ export class GameScene extends Phaser.Scene {
                 case 'joined_game':
                     console.log('Joined game with playerId:', data.playerId);
                     this.playerId = data.playerId;
+                    localStorage.setItem('playerId', data.playerId);
                     break;
                     
                 case 'game_state':
@@ -60,7 +62,8 @@ export class GameScene extends Phaser.Scene {
     private joinGame() {
         this.socket.send(JSON.stringify({
             type: 'join_game',
-            gameId: 'test-game'
+            gameId: this.gameId,
+            playerId: this.playerId
         }));
     }
 

@@ -20,6 +20,7 @@ const wss = new WebSocket.Server({ port: 3000 });
 
 const games = new Map<string, Game>();
 let nextPlayerId = 1;  // Counter for generating player IDs
+const playerSessions = new Map<string, string>();  // Map to track game assignments
 
 wss.on('connection', (ws) => {
   console.log('Client connected');
@@ -34,25 +35,36 @@ wss.on('connection', (ws) => {
       case 'join_game':
         gameId = data.gameId;
         
-        // Generate new player ID
-        playerId = `player${nextPlayerId++}`;
-        console.log(`Assigning playerId: ${playerId}`);
+        // Check if client provided a valid existing playerId
+        if (data.playerId && playerSessions.has(data.playerId)) {
+          playerId = data.playerId;
+          console.log(`Reconnecting existing player: ${playerId}`);
+        } else {
+          // Generate new player ID
+          playerId = `player${nextPlayerId++}`;
+          console.log(`Assigning new playerId: ${playerId}`);
+        }
 
         // Create or join game
         if (!games.has(gameId)) {
           console.log('Creating new game');
           games.set(gameId, new Game(48, [playerId]));
+          playerSessions.set(playerId, gameId);
         } else {
           const game = games.get(gameId)!;
           // Add player to existing game if possible
           if (game.canAddPlayer()) {
             game.addPlayer(playerId);
+            playerSessions.set(playerId, gameId);
           } else {
-            ws.send(JSON.stringify({
-              type: 'error',
-              message: 'Game is full'
-            }));
-            return;
+            // Check if this player was already in the game
+            if (playerSessions.get(playerId) !== gameId) {
+              ws.send(JSON.stringify({
+                type: 'error',
+                message: 'Game is full'
+              }));
+              return;
+            }
           }
         }
 
@@ -108,6 +120,8 @@ wss.on('connection', (ws) => {
   });
 
   ws.on('close', () => {
-    console.log('Client disconnected');
+    console.log('Client disconnected:', playerId);
+    // Note: We intentionally don't remove the player session
+    // so they can reconnect later
   });
 });
