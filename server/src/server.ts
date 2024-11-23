@@ -27,7 +27,7 @@ wss.on('connection', (ws) => {
   let gameId: string;
 
   ws.on('message', (message) => {
-    const data = JSON.parse(message);
+    const data = JSON.parse(message.toString());
 
     switch (data.type) {
       case 'join_game':
@@ -39,15 +39,15 @@ wss.on('connection', (ws) => {
         if (!games.has(gameId)) {
           games.set(gameId, new Game(48, [playerId]));
         }
-        const game = games.get(gameId)!;
+        const gameJoin = games.get(gameId)!;
 
         // Send initial state
-        ws.send(JSON.stringify({ type: 'game_state', state: game.getVisibleState(playerId) }));
+        ws.send(JSON.stringify({ type: 'game_state', state: gameJoin.getVisibleState(playerId) }));
         break;
       case 'action':
-        const game = games.get(gameId);
-        if (!game) return;
-        if (!game.isPlayerTurn(playerId)) {
+        const gameAction = games.get(gameId);
+        if (!gameAction) return;
+        if (!gameAction.isPlayerTurn(playerId)) {
           ws.send(JSON.stringify({ type: 'error', message: 'Not your turn' }));
           return;
         }
