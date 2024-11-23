@@ -2,28 +2,49 @@ import { TileType, Position, GameState } from '@shared/types';
 
 export class GameScene extends Phaser.Scene {
     private hexSize: number;
-    private socket: any;
+    private socket: WebSocket;
+    private playerId: string;
+    private gameId: string;
 
     constructor() {
         super({ key: 'GameScene' });
         this.hexSize = 32;
+        this.playerId = Math.random().toString(36).substring(7);
+        this.gameId = 'test-game';
     }
 
-    init(socket: any) {
+    init(socket: WebSocket) {
         this.socket = socket;
+
+        // Set up socket listeners
+        this.socket.addEventListener('message', (event) => {
+            const data = JSON.parse(event.data);
+            if (data.type === 'game_state') {
+                console.log('Received game state:', data.state);
+                this.renderMap(data.state.visibleTiles);
+            }
+        });
+
+        // Wait for socket to be ready
+        if (this.socket.readyState === WebSocket.OPEN) {
+            this.joinGame();
+        } else {
+            this.socket.addEventListener('open', () => {
+                this.joinGame();
+            });
+        }
     }
 
     create() {
-        // Connect to server
-        const playerId = Math.random().toString(36).substring(7);
-        const gameId = 'test-game';
+        // Scene setup code can go here
+    }
 
-        this.socket.on('game_state', (state: GameState) => {
-            console.log('Received game state:', state);
-            this.renderMap(state.visibleTiles);
-        });
-
-        this.socket.emit('join_game', { gameId, playerId });
+    private joinGame() {
+        this.socket.send(JSON.stringify({
+            type: 'join_game',
+            gameId: this.gameId,
+            playerId: this.playerId
+        }));
     }
 
     private getTileColor(type: TileType): number {
