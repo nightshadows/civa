@@ -5,11 +5,11 @@
     "prebuild": "cd ../shared && npm run build",
     "build": "tsc && mkdir -p public/ && cp src/index.html public/",
     "watch": "tsc -w",
+    "just_build": "tsc",
     "serve": "http-server public -p 8080"
   },
   "dependencies": {
-    "phaser": "^3.70.0",
-    "socket.io-client": "^4.8.1"
+    "phaser": "^3.70.0"
   },
   "devDependencies": {
     "typescript": "^5.7.2",
