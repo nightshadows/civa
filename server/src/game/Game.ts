@@ -35,8 +35,8 @@ export class Game {
         const units: Unit[] = [];
         this.players.forEach((playerId, index) => {
             // Place units at opposite corners for now
-            const baseX = index === 0 ? 0 : this.mapSize - 1;
-            const baseY = index === 0 ? 0 : this.mapSize - 1;
+            const baseX = index === 0 ? 5 : this.mapSize - 5;
+            const baseY = index === 0 ? 5 : this.mapSize - 5;
 
             units.push({
                 id: `warrior-${playerId}`,

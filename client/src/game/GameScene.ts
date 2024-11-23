@@ -1,4 +1,4 @@
-import { TileType, Position, GameState } from '@shared/types';
+import { TileType, Position, GameState, UnitType, Unit } from '@shared/types';
 
 export class GameScene extends Phaser.Scene {
     private hexSize: number;
@@ -21,7 +21,7 @@ export class GameScene extends Phaser.Scene {
             const data = JSON.parse(event.data);
             if (data.type === 'game_state') {
                 console.log('Received game state:', data.state);
-                this.renderMap(data.state.visibleTiles);
+                this.renderMap(data.state.visibleTiles, data.state.visibleUnits);
             }
         });
 
@@ -89,12 +89,30 @@ export class GameScene extends Phaser.Scene {
         graphics.strokePath();
     }
 
-    public renderMap(tiles: { type: TileType; position: Position }[]): void {
+    private drawUnit(unit: Unit, x: number, y: number): void {
+        const text = unit.type === UnitType.ARCHER ? 'A' : 'W';
+        const color = unit.playerId === this.playerId ? '#0000ff' : '#ff0000';
+        
+        this.add.text(x - 8, y - 8, text, {
+            color: color,
+            fontSize: '16px',
+            fontStyle: 'bold'
+        });
+    }
+
+    public renderMap(tiles: { type: TileType; position: Position }[], units: Unit[] = []): void {
         this.children.removeAll();
 
+        // Draw tiles first
         tiles.forEach(tile => {
             const pixelPos = this.hexToPixel(tile.position);
             this.drawHex(pixelPos.x, pixelPos.y, this.getTileColor(tile.type));
+        });
+
+        // Draw units on top
+        units.forEach(unit => {
+            const pixelPos = this.hexToPixel(unit.position);
+            this.drawUnit(unit, pixelPos.x, pixelPos.y);
         });
     }
 }
