@@ -1,6 +1,9 @@
 # Dependencies
 node_modules/
 
+# Public directory
+client/public/
+
 # Build outputs
 dist/
 build/
