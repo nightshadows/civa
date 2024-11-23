@@ -77,8 +77,30 @@ wss.on('connection', (ws) => {
           return;
         }
 
-        // Handle action and update game state
-        // Broadcast updates to relevant players
+        if (data.action.type === 'MOVE_UNIT') {
+          const success = gameAction.moveUnit(
+            data.action.payload.unitId,
+            data.action.payload.destination
+          );
+
+          if (success) {
+            // Broadcast updated game state to all players
+            wss.clients.forEach(client => {
+              if (client.readyState === WebSocket.OPEN) {
+                const playerState = gameAction.getVisibleState(playerId);
+                client.send(JSON.stringify({
+                  type: 'game_state',
+                  state: playerState
+                }));
+              }
+            });
+          } else {
+            ws.send(JSON.stringify({
+              type: 'error',
+              message: 'Invalid move'
+            }));
+          }
+        }
         break;
       default:
         console.error('Unknown message type:', data.type);

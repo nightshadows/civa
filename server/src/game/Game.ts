@@ -131,4 +131,64 @@ export class Game {
             .filter(unit => unit.playerId === this.players[this.currentPlayerIndex])
             .forEach(unit => unit.movementPoints = 2);
     }
+
+    public moveUnit(unitId: string, destination: Position): boolean {
+        const unit = this.units.find(u => u.id === unitId);
+        if (!unit) {
+            console.log('Move failed: Unit not found', { unitId });
+            return false;
+        }
+
+        // Check if it's the unit owner's turn
+        if (!this.isPlayerTurn(unit.playerId)) {
+            console.log('Move failed: Not player\'s turn', { 
+                unitId, 
+                playerId: unit.playerId 
+            });
+            return false;
+        }
+
+        // Check if unit has movement points
+        if (unit.movementPoints <= 0) {
+            console.log('Move failed: No movement points remaining', { 
+                unitId, 
+                movementPoints: unit.movementPoints 
+            });
+            return false;
+        }
+
+        // Calculate distance to ensure it's within movement range
+        const distance = this.getHexDistance(unit.position, destination);
+        if (distance > unit.movementPoints) {
+            console.log('Move failed: Destination out of range', { 
+                unitId, 
+                distance,
+                movementPoints: unit.movementPoints 
+            });
+            return false;
+        }
+
+        const oldPosition = { ...unit.position };
+        // Update unit position and reduce movement points
+        unit.position = destination;
+        unit.movementPoints -= distance;
+
+        console.log('Unit moved successfully:', {
+            unitId,
+            from: oldPosition,
+            to: destination,
+            distance,
+            remainingMovementPoints: unit.movementPoints
+        });
+
+        return true;
+    }
+
+    private getHexDistance(a: Position, b: Position): number {
+        return Math.max(
+            Math.abs(a.x - b.x),
+            Math.abs(a.y - b.y),
+            Math.abs((a.x + a.y) - (b.x + b.y))
+        );
+    }
 }

@@ -220,6 +220,7 @@ export class GameScene extends Phaser.Scene {
     }
 
     private handleHexClick(pointer: Phaser.Input.Pointer): void {
+        const clickedHexPos = this.hexGrid.pixelToHex(pointer.x, pointer.y);
         const clickedUnit = this.findUnitAtPosition(pointer.x, pointer.y);
         
         if (clickedUnit) {
@@ -235,8 +236,34 @@ export class GameScene extends Phaser.Scene {
                     this.showMovementRange(clickedUnit);
                 }
             }
+        } else if (this.selectedUnit) {
+            // Check if the clicked hex is within movement range
+            const movementHexes = this.hexGrid.getHexesInRange(this.selectedUnit.position, this.selectedUnit.movementPoints);
+            const canMoveTo = movementHexes.some(hex => 
+                hex.x === clickedHexPos.x && hex.y === clickedHexPos.y
+            );
+
+            if (canMoveTo) {
+                console.log('Attempting to move unit:', {
+                    unitId: this.selectedUnit.id,
+                    from: this.selectedUnit.position,
+                    to: clickedHexPos
+                });
+
+                // Send move action to server
+                this.socket.send(JSON.stringify({
+                    type: 'action',
+                    action: {
+                        type: 'MOVE_UNIT',
+                        payload: {
+                            unitId: this.selectedUnit.id,
+                            destination: clickedHexPos
+                        }
+                    }
+                }));
+            }
+            this.clearSelection();
         } else {
-            // Clicked on empty hex
             this.clearSelection();
         }
     }

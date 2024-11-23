@@ -38,5 +38,10 @@ export interface GameState {
 
 export interface GameAction {
     type: 'MOVE_UNIT' | 'END_TURN';
-    payload: any;
+    payload: MoveUnitPayload | null;
+}
+
+export interface MoveUnitPayload {
+    unitId: string;
+    destination: Position;
 }
