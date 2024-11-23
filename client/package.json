@@ -3,16 +3,16 @@
   "version": "1.0.0",
   "scripts": {
     "prebuild": "cd ../shared && npm run build",
-    "build": "tsc && mkdir -p public/ && cp src/index.html public/",
-    "watch": "tsc -w",
-    "just_build": "tsc",
-    "serve": "http-server public -p 8080"
+    "dev": "parcel src/index.html",
+    "build": "parcel build src/index.html --dist-dir public",
+    "clean": "rm -rf .parcel-cache public"
   },
   "dependencies": {
     "phaser": "^3.70.0"
   },
   "devDependencies": {
-    "typescript": "^5.7.2",
-    "http-server": "^14.1.1"
+    "parcel": "^2.10.3",
+    "process": "^0.11.10",
+    "typescript": "^5.7.2"
   }
 }

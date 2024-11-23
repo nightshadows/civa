@@ -13,7 +13,7 @@ app.use(cors());
 app.use(express.static(path.join(__dirname, '../../client/public')));
 
 const server = app.listen(3001, () => {
-  console.log('Server running on http://localhost:3000');
+  console.log('Server running on http://localhost:3001');
 });
 
 const wss = new WebSocket.Server({ port: 3000 });

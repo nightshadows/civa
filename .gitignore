@@ -44,3 +44,6 @@ Thumbs.db
 # Keep source TypeScript files
 !src/**/*.ts
 !shared/**/*.ts
+
+# Parcel cache
+.parcel-cache/

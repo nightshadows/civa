@@ -1,5 +1,5 @@
-import "phaser"
-import { GameScene } from './game/GameScene.js';
+import Phaser from 'phaser';
+import { GameScene } from './game/GameScene';
 
 const socket = new WebSocket('ws://localhost:3000');
 
