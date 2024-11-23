@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "scripts": {
     "prebuild": "cd ../shared && npm run build",
-    "build": "tsc && cp src/index.html public/",
+    "build": "tsc && mkdir -p public/ && cp src/index.html public/",
     "watch": "tsc -w",
     "serve": "http-server public -p 8080"
   },
