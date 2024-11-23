@@ -11,7 +11,7 @@
         "moduleResolution": "node",
         "baseUrl": ".",
         "paths": {
-            "@shared/*": ["../shared/src/*"]
+            "@shared/*": ["../shared/dist/*"]
         },
         "composite": true,
         "declaration": true,

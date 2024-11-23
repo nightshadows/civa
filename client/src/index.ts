@@ -1,5 +1,4 @@
-import 'phaser';
-import { GameScene } from './game/GameScene';
+import { GameScene } from './game/GameScene.js';
 
 const socket = io('http://localhost:3000', {
     transports: ['websocket'],
