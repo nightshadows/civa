@@ -1,5 +1,5 @@
 import 'phaser';
-import { TileType, Position, GameState } from '../../../shared/src/types';
+import { TileType, Position, GameState } from '@shared/types';
 
 export class GameScene extends Phaser.Scene {
     private hexSize: number;

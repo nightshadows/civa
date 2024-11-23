@@ -7,13 +7,20 @@
         "skipLibCheck": true,
         "forceConsistentCasingInFileNames": true,
         "outDir": "./public",
-        "rootDir": ".",
+        "rootDir": "./src",
         "moduleResolution": "node",
         "baseUrl": ".",
-        "composite": true
+        "paths": {
+            "@shared/*": ["../shared/src/*"]
+        },
+        "composite": true,
+        "declaration": true,
+        "noImplicitAny": true
     },
+    "references": [
+        { "path": "../shared" }
+    ],
     "include": [
-        "src/**/*",
-        "../shared/src/types.ts"
+        "src/**/*"
     ]
 }
