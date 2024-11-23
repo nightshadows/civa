@@ -6,6 +6,7 @@ export class Game {
     private players: string[];
     private currentPlayerIndex: number;
     private mapSize: number;
+    private readonly MAX_PLAYERS = 2;
 
     constructor(mapSize: number, players: string[]) {
         this.mapSize = mapSize;
@@ -13,6 +14,46 @@ export class Game {
         this.currentPlayerIndex = 0;
         this.map = this.generateMap();
         this.units = this.initializeUnits();
+    }
+
+    public canAddPlayer(): boolean {
+        return this.players.length < this.MAX_PLAYERS;
+    }
+
+    public addPlayer(playerId: string): void {
+        if (!this.canAddPlayer()) {
+            throw new Error('Game is full');
+        }
+        this.players.push(playerId);
+        // Initialize units for the new player
+        const newUnits = this.initializeUnitsForPlayer(playerId, this.players.length - 1);
+        this.units.push(...newUnits);
+    }
+
+    private initializeUnitsForPlayer(playerId: string, playerIndex: number): Unit[] {
+        const units: Unit[] = [];
+        const baseX = playerIndex === 0 ? 5 : this.mapSize - 5;
+        const baseY = playerIndex === 0 ? 5 : this.mapSize - 5;
+
+        units.push({
+            id: `warrior-${playerId}`,
+            type: UnitType.WARRIOR,
+            position: { x: baseX, y: baseY },
+            playerId,
+            movementPoints: 2,
+            visionRange: 2
+        });
+
+        units.push({
+            id: `archer-${playerId}`,
+            type: UnitType.ARCHER,
+            position: { x: baseX, y: baseY + 1 },
+            playerId,
+            movementPoints: 2,
+            visionRange: 3
+        });
+
+        return units;
     }
 
     private generateMap(): TileType[][] {
@@ -60,7 +101,7 @@ export class Game {
     }
 
     public getVisibleState(playerId: string): GameState {
-        // For now, return all tiles (we'll implement fog of war later)
+        // For now, return all tiles and units (we'll implement fog of war later)
         const visibleTiles: Tile[] = [];
         for (let y = 0; y < this.mapSize; y++) {
             for (let x = 0; x < this.mapSize; x++) {
@@ -72,6 +113,7 @@ export class Game {
         }
 
         return {
+            playerId,
             currentPlayerId: this.players[this.currentPlayerIndex],
             visibleTiles,
             visibleUnits: this.units

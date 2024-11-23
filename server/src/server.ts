@@ -19,6 +19,7 @@ const server = app.listen(3001, () => {
 const wss = new WebSocket.Server({ port: 3000 });
 
 const games = new Map<string, Game>();
+let nextPlayerId = 1;  // Counter for generating player IDs
 
 wss.on('connection', (ws) => {
   console.log('Client connected');
@@ -31,18 +32,42 @@ wss.on('connection', (ws) => {
 
     switch (data.type) {
       case 'join_game':
-        console.log('Player joining game:', data);
-        playerId = data.playerId;
         gameId = data.gameId;
+        
+        // Generate new player ID
+        playerId = `player${nextPlayerId++}`;
+        console.log(`Assigning playerId: ${playerId}`);
 
-        // Create or join game logic here
+        // Create or join game
         if (!games.has(gameId)) {
+          console.log('Creating new game');
           games.set(gameId, new Game(48, [playerId]));
+        } else {
+          const game = games.get(gameId)!;
+          // Add player to existing game if possible
+          if (game.canAddPlayer()) {
+            game.addPlayer(playerId);
+          } else {
+            ws.send(JSON.stringify({
+              type: 'error',
+              message: 'Game is full'
+            }));
+            return;
+          }
         }
-        const gameJoin = games.get(gameId)!;
 
-        // Send initial state
-        ws.send(JSON.stringify({ type: 'game_state', state: gameJoin.getVisibleState(playerId) }));
+        // Send join confirmation with assigned playerId
+        ws.send(JSON.stringify({
+          type: 'joined_game',
+          playerId: playerId
+        }));
+
+        // Send initial game state
+        const game = games.get(gameId)!;
+        ws.send(JSON.stringify({
+          type: 'game_state',
+          state: game.getVisibleState(playerId)
+        }));
         break;
       case 'action':
         const gameAction = games.get(gameId);

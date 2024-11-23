@@ -30,6 +30,7 @@ export interface Unit {
 }
 
 export interface GameState {
+    playerId: string;
     currentPlayerId: string;
     visibleTiles: Tile[];
     visibleUnits: Unit[];
