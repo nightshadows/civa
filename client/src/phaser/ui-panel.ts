@@ -4,6 +4,7 @@ export class UIPanel {
     private scene: Phaser.Scene;
     private background: Phaser.GameObjects.Rectangle;
     private unitInfo: Phaser.GameObjects.Text;
+    private turnInfo: Phaser.GameObjects.Text;
     private fortifyButton: Phaser.GameObjects.Rectangle;
     private fortifyText: Phaser.GameObjects.Text;
     private levelUpButton: Phaser.GameObjects.Rectangle;
@@ -20,6 +21,13 @@ export class UIPanel {
         // Panel background
         this.background = this.scene.add.rectangle(0, 600, 800, 100, 0x333333)
             .setOrigin(0, 0);
+
+        // Turn info text
+        this.turnInfo = this.scene.add.text(700, 620, '', {
+            color: '#ffffff',
+            fontSize: '16px',
+            align: 'right'
+        });
 
         // Unit info area
         this.unitInfo = this.scene.add.text(20, 620, '', {
@@ -75,6 +83,13 @@ export class UIPanel {
         this.fortifyButton.setFillStyle(unit.movementPoints > 0 ? 0x44aa44 : 0x666666);
         // For now, level up is always disabled as we haven't implemented experience
         this.levelUpButton.setFillStyle(0x666666);
+    }
+
+    public updateTurnInfo(currentPlayerId: string, myPlayerId: string) {
+        const isMyTurn = currentPlayerId === myPlayerId;
+        this.turnInfo.setText(isMyTurn ? 'Your Turn' : 'Enemy Turn');
+        this.turnInfo.setColor(isMyTurn ? '#44ff44' : '#ff4444');
+        this.endTurnButton.setFillStyle(isMyTurn ? 0x44aa44 : 0x666666);
     }
 
     private onFortifyClick() {

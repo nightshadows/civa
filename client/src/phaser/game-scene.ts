@@ -55,6 +55,7 @@ export class GameScene extends Phaser.Scene {
                         console.log('Received game state:', data.state);
                         this.registry.set('gameState', data.state);
                         this.renderMap(data.state.visibleTiles, data.state.visibleUnits);
+                        this.uiPanel.updateTurnInfo(data.state.currentPlayerId, data.state.playerId);
                         break;
 
                     case 'error':
