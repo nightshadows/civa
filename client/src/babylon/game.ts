@@ -1,16 +1,24 @@
 import * as BABYLON from '@babylonjs/core';
 import "@babylonjs/loaders/glTF";
 import * as GUI from '@babylonjs/gui';
+import { HexGrid } from '../phaser/hex-grid';
+import { Position, TileType, Unit } from '@shared/types';
+
 var canvas = document.getElementById('renderCanvas') as HTMLCanvasElement;
 let engine: BABYLON.Engine;
 let scene: BABYLON.Scene;
+const hexSize = 1.2;
+const hexGrid = new HexGrid(hexSize);
+let gamePlayerId: string;
+let gameState;
+let gameSocket: WebSocket;
 
 let createDefaultEngine = function () {
     return new BABYLON.Engine(canvas, true, { preserveDrawingBuffer: true, stencil: true, disableWebGL2Support: false });
 };
 
 async function startRenderLoop() {
-    let scene = await createScene();
+    scene = await createScene();
     engine.runRenderLoop(function () {
         if (scene && scene.activeCamera) {
             scene.render();
@@ -18,7 +26,14 @@ async function startRenderLoop() {
     });
 }
 
-export async function init() {
+export async function init(socket: WebSocket, playerId: string) {
+    gameSocket = socket;
+    gamePlayerId = playerId;
+    // Resize
+    window.addEventListener("resize", function () {
+        engine.resize();
+    });
+
     var asyncEngineCreation = async function () {
         try {
             return createDefaultEngine();
@@ -35,17 +50,57 @@ export async function init() {
     await startRenderLoop();
 };
 
-// Resize
-window.addEventListener("resize", function () {
-    engine.resize();
-});
+function renderMap(hexTileImport: BABYLON.AssetContainer, waterMaterialTop: BABYLON.NodeMaterial, camera: BABYLON.ArcRotateCamera, scene: BABYLON.Scene, tiles: { type: TileType; position: Position }[], units: Unit[] = []) {
+    // TODO adjust according to tiles
+    let gridSize = 5;
+    let hexWidthDistance = 2;
+    let hexHeightDistance = 1.5;
+    let gridStart = new BABYLON.Vector3((hexWidthDistance / 2) * (gridSize - 1), 0, (-hexHeightDistance * 0.75) * (gridSize - 1));
+    tiles.forEach(tile => {
+        const pixelPos = hexGrid.hexToPixel(tile.position);
+        let hexTile = hexTileImport.instantiateModelsToScene();
+        let hexTileRoot = hexTile.rootNodes[0] as BABYLON.Mesh;
+        hexTileRoot.name = "hexTile" + tile.position.x + tile.position.y;
+        hexTileRoot.position.copyFrom(gridStart);
+        hexTileRoot.position.x = pixelPos.x;
+        hexTileRoot.position.z = pixelPos.y;
 
-// var  = function() { return new BABYLON.Engine(canvas, true, { preserveDrawingBuffer: true, stencil: true,  disableWebGL2Support: false}); };
+        let hexChildren = hexTileRoot.getDescendants() as BABYLON.Mesh[];
+        for (let k = 0; k < hexChildren.length; k++) {
+            hexChildren[k].name = hexChildren[k].name.slice(9);
+            if (hexChildren[k].name === "terrain") {
+                hexChildren[k].visibility = 0;
+            }
+        }
+
+        let hexTileChildMeshes = hexTileRoot.getChildMeshes();
+        for (let j = 0; j < hexTileChildMeshes.length; j++) {
+            if (hexTileChildMeshes[j].name === "top") {
+                hexTileChildMeshes[j].material = waterMaterialTop;
+                hexTileChildMeshes[j].hasVertexAlpha = false;
+            }
+        }
+
+        // not sure why it's needed
+        let hexTileAnimGroup = hexTile.animationGroups[0];
+        hexTileAnimGroup.name = "AnimGroup" + hexTileRoot.name;
+    });
+
+
+    camera.radius = gridSize * 5;
+    camera.upperRadiusLimit = camera.radius + 5;
+
+    // not sure why it's needed
+    let allAnimGroups = scene.animationGroups;
+    for (let i = 0; i < allAnimGroups.length; i++) {
+        allAnimGroups[i].reset();
+    }
+}
 
 async function createScene() {
 
     // This creates a basic Babylon Scene object (non-mesh)
-    var scene = new BABYLON.Scene(engine);
+    scene = new BABYLON.Scene(engine);
 
     var camera = new BABYLON.ArcRotateCamera("camera", BABYLON.Tools.ToRadians(90), BABYLON.Tools.ToRadians(45), 10, BABYLON.Vector3.Zero(), scene);
 
@@ -74,17 +129,49 @@ async function createScene() {
     let waterMaterialTop: BABYLON.NodeMaterial;
     let waterMaterialBottom: BABYLON.NodeMaterial;
 
-    BABYLON.NodeMaterial.ParseFromSnippetAsync("TD23TV#21", scene).then(nodeMaterial => {
-        waterMaterialTop = nodeMaterial;
-        waterMaterialTop.name = "waterMaterialTop"
-        BABYLON.NodeMaterial.ParseFromSnippetAsync("BS6C1U#1", scene).then(nodeMaterial => {
-            waterMaterialBottom = nodeMaterial;
-            waterMaterialBottom.name = "waterMaterialBottom";
+    let nodeMaterial = await BABYLON.NodeMaterial.ParseFromSnippetAsync("TD23TV#21", scene);
+    waterMaterialTop = nodeMaterial;
+    waterMaterialTop.name = "waterMaterialTop"
+    nodeMaterial = await BABYLON.NodeMaterial.ParseFromSnippetAsync("BS6C1U#1", scene);
+    waterMaterialBottom = nodeMaterial;
+    waterMaterialBottom.name = "waterMaterialBottom";
 
-            createHexGrid(gridSize, hexWidthDistance, hexHeightDistance, rowlengthAddition, hexTileImport, waterMaterialTop, camera, scene);
-        });
+    gameSocket.addEventListener('message', (event) => {
+        const data = JSON.parse(event.data);
+
+        switch (data.type) {
+            case 'joined_game':
+                console.log('Joined game with playerId:', data.playerId);
+                gamePlayerId = data.playerId;
+                localStorage.setItem('playerId', data.playerId);
+                break;
+
+            case 'game_state':
+                console.log('Received game state:', data.state);
+                gameState = data.state;
+                renderMap(hexTileImport, waterMaterialTop, camera, scene, data.state.visibleTiles, data.state.visibleUnits);
+                break;
+
+            case 'error':
+                console.error('Game error:', data.message);
+                break;
+        }
     });
+    function joinGame() {
+        gameSocket.send(JSON.stringify({
+            type: 'join_game',
+            gameId: 'test-game',
+            playerId: gamePlayerId
+        }));
+    }
+    // Join game when scene starts
+    if (gameSocket.readyState === WebSocket.OPEN) {
+        joinGame();
+    } else {
+        gameSocket.addEventListener('open', () => joinGame());
+    }
 
+    // createHexGrid(gridSize, hexWidthDistance, hexHeightDistance, rowlengthAddition, hexTileImport, waterMaterialTop, camera, scene);
     //Factor is the width and height of the texure you'd like to create, must be a factor of 2.
     let factor = 512;
 

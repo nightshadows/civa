@@ -48,7 +48,7 @@ wss.on('connection', (ws) => {
         // Create or join game
         if (!games.has(gameId)) {
           console.log('Creating new game');
-          games.set(gameId, new Game(48, [playerId]));
+          games.set(gameId, new Game(12, [playerId]));
           playerSessions.set(playerId, gameId);
         } else {
           const game = games.get(gameId)!;
