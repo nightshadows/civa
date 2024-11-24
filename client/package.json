@@ -21,7 +21,7 @@
     "typescript": "^5.7.2"
   },
   "staticFiles": {
-    "staticPath": "assets",
-    "staticOutDir": "public/assets"
+    "staticPath": "public_assets",
+    "staticOutDir": "public"
   }
 }
