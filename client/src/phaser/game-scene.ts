@@ -39,34 +39,37 @@ export class GameScene extends Phaser.Scene {
         this.uiPanel = new UIPanel(this);
         this.mapContainer = this.add.container(0, 0);
 
-        this.socket.addEventListener('message', (event) => {
-            const data = JSON.parse(event.data);
+        // Wait for assets to load before processing messages
+        this.load.once('complete', () => {
+            this.socket.addEventListener('message', (event) => {
+                const data = JSON.parse(event.data);
 
-            switch (data.type) {
-                case 'joined_game':
-                    console.log('Joined game with playerId:', data.playerId);
-                    this.playerId = data.playerId;
-                    localStorage.setItem('playerId', data.playerId);
-                    break;
+                switch (data.type) {
+                    case 'joined_game':
+                        console.log('Joined game with playerId:', data.playerId);
+                        this.playerId = data.playerId;
+                        localStorage.setItem('playerId', data.playerId);
+                        break;
 
-                case 'game_state':
-                    console.log('Received game state:', data.state);
-                    this.registry.set('gameState', data.state);
-                    this.renderMap(data.state.visibleTiles, data.state.visibleUnits);
-                    break;
+                    case 'game_state':
+                        console.log('Received game state:', data.state);
+                        this.registry.set('gameState', data.state);
+                        this.renderMap(data.state.visibleTiles, data.state.visibleUnits);
+                        break;
 
-                case 'error':
-                    console.error('Game error:', data.message);
-                    break;
+                    case 'error':
+                        console.error('Game error:', data.message);
+                        break;
+                }
+            });
+
+            // Join game when scene starts
+            if (this.socket.readyState === WebSocket.OPEN) {
+                this.joinGame();
+            } else {
+                this.socket.addEventListener('open', () => this.joinGame());
             }
         });
-
-        // Join game when scene starts
-        if (this.socket.readyState === WebSocket.OPEN) {
-            this.joinGame();
-        } else {
-            this.socket.addEventListener('open', () => this.joinGame());
-        }
     }
 
     create() {
