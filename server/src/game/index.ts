@@ -7,10 +7,12 @@ export class Game {
     private currentPlayerIndex: number;
     private mapSize: number;
     private readonly MAX_PLAYERS = 2;
+    private _gameId: string;
 
-    constructor(mapSize: number, players: string[]) {
+    constructor(mapSize: number, players: string[], gameId: string) {
         this.mapSize = mapSize;
         this.players = players;
+        this._gameId = gameId;
         this.currentPlayerIndex = 0;
         this.map = this.generateMap();
         this.units = this.initializeUnits();
@@ -124,7 +126,7 @@ export class Game {
         return this.players[this.currentPlayerIndex] === playerId;
     }
 
-    public endTurn() {
+    public endTurn(): void {
         this.currentPlayerIndex = (this.currentPlayerIndex + 1) % this.players.length;
         // Reset movement points for new player's units
         this.units
@@ -141,18 +143,18 @@ export class Game {
 
         // Check if it's the unit owner's turn
         if (!this.isPlayerTurn(unit.playerId)) {
-            console.log('Move failed: Not player\'s turn', { 
-                unitId, 
-                playerId: unit.playerId 
+            console.log('Move failed: Not player\'s turn', {
+                unitId,
+                playerId: unit.playerId
             });
             return false;
         }
 
         // Check if unit has movement points
         if (unit.movementPoints <= 0) {
-            console.log('Move failed: No movement points remaining', { 
-                unitId, 
-                movementPoints: unit.movementPoints 
+            console.log('Move failed: No movement points remaining', {
+                unitId,
+                movementPoints: unit.movementPoints
             });
             return false;
         }
@@ -160,10 +162,10 @@ export class Game {
         // Calculate distance to ensure it's within movement range
         const distance = this.getHexDistance(unit.position, destination);
         if (distance > unit.movementPoints) {
-            console.log('Move failed: Destination out of range', { 
-                unitId, 
+            console.log('Move failed: Destination out of range', {
+                unitId,
                 distance,
-                movementPoints: unit.movementPoints 
+                movementPoints: unit.movementPoints
             });
             return false;
         }
@@ -190,5 +192,17 @@ export class Game {
             Math.abs(a.y - b.y),
             Math.abs((a.x + a.y) - (b.x + b.y))
         );
+    }
+
+    public fortifyUnit(unitId: string): boolean {
+        const unit = this.units.find(u => u.id === unitId);
+        if (!unit || unit.movementPoints <= 0) return false;
+
+        unit.movementPoints = 0;
+        return true;
+    }
+
+    public get gameId(): string {
+        return this._gameId;
     }
 }

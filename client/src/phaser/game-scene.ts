@@ -1,5 +1,6 @@
 import { TileType, Position, GameState, UnitType, Unit } from '@shared/types';
 import { HexGrid } from './hex-grid';
+import { UIPanel } from './ui-panel';
 
 export class GameScene extends Phaser.Scene {
     private hexSize: number;
@@ -10,6 +11,8 @@ export class GameScene extends Phaser.Scene {
     private highlightedHexes: Phaser.GameObjects.Graphics[] = [];
     private hexGrid: HexGrid;
     private selectedUnitSprite: Phaser.GameObjects.Graphics | null = null;
+    private uiPanel: UIPanel;
+    private mapContainer: Phaser.GameObjects.Container;
 
     constructor() {
         super({ key: 'GameScene' });
@@ -21,23 +24,23 @@ export class GameScene extends Phaser.Scene {
     init(data: { socket: WebSocket; playerId: string }) {
         this.socket = data.socket;
         this.playerId = data.playerId;
-        
+
         this.socket.addEventListener('message', (event) => {
             const data = JSON.parse(event.data);
-            
+
             switch (data.type) {
                 case 'joined_game':
                     console.log('Joined game with playerId:', data.playerId);
                     this.playerId = data.playerId;
                     localStorage.setItem('playerId', data.playerId);
                     break;
-                    
+
                 case 'game_state':
                     console.log('Received game state:', data.state);
                     this.registry.set('gameState', data.state);
                     this.renderMap(data.state.visibleTiles, data.state.visibleUnits);
                     break;
-                    
+
                 case 'error':
                     console.error('Game error:', data.message);
                     break;
@@ -53,10 +56,20 @@ export class GameScene extends Phaser.Scene {
     }
 
     create() {
+        // Create container for map elements
+        this.mapContainer = this.add.container(0, 0);
+
         // Add click handler
         this.input.on('pointerdown', (pointer: Phaser.Input.Pointer) => {
             this.handleHexClick(pointer);
         });
+
+        this.uiPanel = new UIPanel(this);
+
+        // Add event listeners for UI actions
+        this.events.on('fortify_unit', this.handleFortify, this);
+        this.events.on('level_up_unit', this.handleLevelUp, this);
+        this.events.on('end_turn', this.handleEndTurn, this);
     }
 
     private joinGame() {
@@ -77,8 +90,8 @@ export class GameScene extends Phaser.Scene {
         }
     }
 
-    private drawHex(x: number, y: number, color: number): void {
-        const graphics = this.add.graphics();
+    private drawHex(x: number, y: number, color: number): Phaser.GameObjects.Graphics {
+        const graphics = new Phaser.GameObjects.Graphics(this);
         graphics.lineStyle(1, 0x000000, 0.5);
         graphics.fillStyle(color);
 
@@ -97,21 +110,16 @@ export class GameScene extends Phaser.Scene {
         graphics.closePath();
         graphics.fillPath();
         graphics.strokePath();
+
+        return graphics;
     }
 
-    private drawUnit(unit: Unit, x: number, y: number): void {
+    private drawUnit(unit: Unit, x: number, y: number): Phaser.GameObjects.Text {
         const text = unit.type === UnitType.ARCHER ? 'A' : 'W';
         const isMyUnit = unit.playerId === this.playerId;
         const color = isMyUnit ? '#00ff00' : '#ff0000';
-        
-        console.log('Drawing unit:', {
-            unitId: unit.id,
-            unitPlayerId: unit.playerId,
-            myPlayerId: this.playerId,
-            isMyUnit
-        });
-        
-        this.add.text(x - 8, y - 8, text, {
+
+        return new Phaser.GameObjects.Text(this, x - 8, y - 8, text, {
             color: color,
             fontSize: '16px',
             fontStyle: 'bold'
@@ -119,20 +127,34 @@ export class GameScene extends Phaser.Scene {
     }
 
     public renderMap(tiles: { type: TileType; position: Position }[], units: Unit[] = []): void {
-        this.clearSelection();  // Clear selection when re-rendering
-        
-        this.children.removeAll();
+        console.log('Rendering map with units:', units);
+        this.clearSelection();
+
+        // Destroy all existing children
+        this.mapContainer.removeAll(true);  // true means destroy the children
+        console.log('Cleared map container');
+
+        // Create a new container for tiles
+        const tilesContainer = new Phaser.GameObjects.Container(this, 0, 0);
+        this.mapContainer.add(tilesContainer);
+
+        // Create a new container for units
+        const unitsContainer = new Phaser.GameObjects.Container(this, 0, 0);
+        this.mapContainer.add(unitsContainer);
 
         // Draw tiles first
         tiles.forEach(tile => {
             const pixelPos = this.hexGrid.hexToPixel(tile.position);
-            this.drawHex(pixelPos.x, pixelPos.y, this.getTileColor(tile.type));
+            const hex = this.drawHex(pixelPos.x, pixelPos.y, this.getTileColor(tile.type));
+            tilesContainer.add(hex);
         });
 
         // Draw units on top
         units.forEach(unit => {
             const pixelPos = this.hexGrid.hexToPixel(unit.position);
-            this.drawUnit(unit, pixelPos.x, pixelPos.y);
+            console.log('Drawing unit at position:', unit.position, 'pixel pos:', pixelPos);
+            const unitSprite = this.drawUnit(unit, pixelPos.x, pixelPos.y);
+            unitsContainer.add(unitSprite);
         });
 
         // Restore selection if needed
@@ -154,15 +176,15 @@ export class GameScene extends Phaser.Scene {
 
     private showMovementRange(unit: Unit): void {
         this.clearHighlights();
-        
+
         // Get all hex coordinates within movement range
         const movementHexes = this.hexGrid.getHexesInRange(unit.position, unit.movementPoints);
-        
+
         // Remove the unit's current position from the highlights
-        const reachableHexes = movementHexes.filter(hex => 
+        const reachableHexes = movementHexes.filter(hex =>
             !(hex.x === unit.position.x && hex.y === unit.position.y)
         );
-        
+
         // Draw highlights for each hex
         reachableHexes.forEach(hexPos => {
             const pixelPos = this.hexGrid.hexToPixel(hexPos);
@@ -202,6 +224,7 @@ export class GameScene extends Phaser.Scene {
             this.selectedUnitSprite.destroy();
             this.selectedUnitSprite = null;
         }
+        this.uiPanel.updateUnitInfo(null);
     }
 
     private highlightSelectedUnit(unit: Unit): void {
@@ -211,21 +234,22 @@ export class GameScene extends Phaser.Scene {
         }
 
         const pixelPos = this.hexGrid.hexToPixel(unit.position);
-        
+
         // Create a new highlight for the selected unit
         const highlight = this.add.graphics();
         highlight.lineStyle(3, 0x00ff00, 1);  // Thick green border
-        
+
         // Draw circle around the unit
         highlight.strokeCircle(pixelPos.x, pixelPos.y, this.hexSize - 5);
-        
+
         this.selectedUnitSprite = highlight;
+        this.uiPanel.updateUnitInfo(unit);
     }
 
     private handleHexClick(pointer: Phaser.Input.Pointer): void {
         const clickedHexPos = this.hexGrid.pixelToHex(pointer.x, pointer.y);
         const clickedUnit = this.findUnitAtPosition(pointer.x, pointer.y);
-        
+
         if (clickedUnit) {
             // If clicking on a unit that belongs to the player
             if (clickedUnit.playerId === this.playerId) {
@@ -242,7 +266,7 @@ export class GameScene extends Phaser.Scene {
         } else if (this.selectedUnit) {
             // Check if the clicked hex is within movement range
             const movementHexes = this.hexGrid.getHexesInRange(this.selectedUnit.position, this.selectedUnit.movementPoints);
-            const canMoveTo = movementHexes.some(hex => 
+            const canMoveTo = movementHexes.some(hex =>
                 hex.x === clickedHexPos.x && hex.y === clickedHexPos.y
             );
 
@@ -274,9 +298,9 @@ export class GameScene extends Phaser.Scene {
     private findUnitAtPosition(x: number, y: number): Unit | null {
         const hexPos = this.hexGrid.pixelToHex(x, y);
         const units = this.getVisibleUnits();
-        
-        return units.find(unit => 
-            unit.position.x === hexPos.x && 
+
+        return units.find(unit =>
+            unit.position.x === hexPos.x &&
             unit.position.y === hexPos.y
         ) || null;
     }
@@ -285,5 +309,33 @@ export class GameScene extends Phaser.Scene {
     private getVisibleUnits(): Unit[] {
         const gameState = this.registry.get('gameState');
         return gameState?.visibleUnits || [];
+    }
+
+    private handleFortify() {
+        if (this.selectedUnit && this.selectedUnit.movementPoints > 0) {
+            this.socket.send(JSON.stringify({
+                type: 'action',
+                action: {
+                    type: 'FORTIFY_UNIT',
+                    payload: {
+                        unitId: this.selectedUnit.id
+                    }
+                }
+            }));
+        }
+    }
+
+    private handleLevelUp() {
+        // To be implemented when we add experience system
+    }
+
+    private handleEndTurn() {
+        this.socket.send(JSON.stringify({
+            type: 'action',
+            action: {
+                type: 'END_TURN',
+                payload: null
+            }
+        }));
     }
 }

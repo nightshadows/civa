@@ -21,7 +21,7 @@ socket.addEventListener('open', () => {
 const config = {
     type: Phaser.AUTO,
     width: 800,
-    height: 600,
+    height: 700,
     backgroundColor: '#1099bb',
     scene: GameScene
 };

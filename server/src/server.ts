@@ -34,7 +34,7 @@ wss.on('connection', (ws) => {
     switch (data.type) {
       case 'join_game':
         gameId = data.gameId;
-        
+
         // Check if client provided a valid existing playerId
         if (data.playerId && playerSessions.has(data.playerId)) {
           playerId = data.playerId;
@@ -48,7 +48,7 @@ wss.on('connection', (ws) => {
         // Create or join game
         if (!games.has(gameId)) {
           console.log('Creating new game');
-          games.set(gameId, new Game(12, [playerId]));
+          games.set(gameId, new Game(12, [playerId], gameId));
           playerSessions.set(playerId, gameId);
         } else {
           const game = games.get(gameId)!;
@@ -99,11 +99,17 @@ wss.on('connection', (ws) => {
             // Broadcast updated game state to all players
             wss.clients.forEach(client => {
               if (client.readyState === WebSocket.OPEN) {
-                const playerState = gameAction.getVisibleState(playerId);
-                client.send(JSON.stringify({
-                  type: 'game_state',
-                  state: playerState
-                }));
+                // Get the specific player's state for each client
+                const clientId = Array.from(playerSessions.entries())
+                  .find(([_, gameId]) => gameId === gameAction.gameId)?.[0];
+
+                if (clientId) {
+                  const playerState = gameAction.getVisibleState(clientId);
+                  client.send(JSON.stringify({
+                    type: 'game_state',
+                    state: playerState
+                  }));
+                }
               }
             });
           } else {
