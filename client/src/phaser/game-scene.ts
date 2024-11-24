@@ -178,16 +178,16 @@ export class GameScene extends Phaser.Scene {
         return container;
     }
 
-    private drawUnit(unit: Unit, x: number, y: number): Phaser.GameObjects.Text {
-        const text = unit.type === UnitType.ARCHER ? 'A' : 'W';
+    private drawUnit(unit: Unit, x: number, y: number): Phaser.GameObjects.Sprite {
         const isMyUnit = unit.playerId === this.playerId;
-        const color = isMyUnit ? '#00ff00' : '#ff0000';
-
-        return new Phaser.GameObjects.Text(this, x - 8, y - 8, text, {
-            color: color,
-            fontSize: '16px',
-            fontStyle: 'bold'
-        });
+        const color = isMyUnit ? 0x00ff00 : 0xff0000;
+        
+        const spriteKey = unit.type === UnitType.WARRIOR ? 'warrior' : 'archer';
+        const sprite = this.add.sprite(x, y, spriteKey);
+        sprite.setTint(color);
+        sprite.setScale(0.5);
+        
+        return sprite;
     }
 
     public renderMap(tiles: { type: TileType; position: Position }[], units: Unit[] = []): void {
@@ -417,5 +417,19 @@ export class GameScene extends Phaser.Scene {
                 payload: null
             }
         }));
+    }
+
+    preload() {
+        // Load warrior sprite
+        this.load.spritesheet('warrior', 'assets/warrior.png', {
+            frameWidth: 32,
+            frameHeight: 32
+        });
+        
+        // Load archer sprite
+        this.load.spritesheet('archer', 'assets/archer.png', {
+            frameWidth: 32,
+            frameHeight: 32
+        });
     }
 }
