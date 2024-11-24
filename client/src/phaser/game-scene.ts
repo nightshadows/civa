@@ -243,8 +243,11 @@ export class GameScene extends Phaser.Scene {
     private showMovementRange(unit: Unit): void {
         this.clearHighlights();
 
+        const gameState = this.registry.get('gameState');
+        const mapSize = gameState?.visibleTiles.length ** 0.5; // Calculate map size from tiles
+
         // Get all hex coordinates within movement range
-        const movementHexes = this.hexGrid.getHexesInRange(unit.position, unit.movementPoints);
+        const movementHexes = this.hexGrid.getHexesInRange(unit.position, unit.movementPoints, mapSize);
 
         // Remove the unit's current position from the highlights
         const reachableHexes = movementHexes.filter(hex =>
@@ -326,6 +329,8 @@ export class GameScene extends Phaser.Scene {
         );
 
         const clickedUnit = this.findUnitAtPosition(pointer.x, pointer.y);
+        const gameState = this.registry.get('gameState');
+        const mapSize = Math.sqrt(gameState.visibleTiles.length); // Calculate map size from tiles
 
         if (clickedUnit) {
             // If clicking on a unit that belongs to the player
@@ -341,8 +346,12 @@ export class GameScene extends Phaser.Scene {
                 }
             }
         } else if (this.selectedUnit) {
-            // Rest of the movement logic remains the same
-            const movementHexes = this.hexGrid.getHexesInRange(this.selectedUnit.position, this.selectedUnit.movementPoints);
+            // Check if the clicked hex is within movement range
+            const movementHexes = this.hexGrid.getHexesInRange(
+                this.selectedUnit.position,
+                this.selectedUnit.movementPoints,
+                mapSize
+            );
             const canMoveTo = movementHexes.some(hex =>
                 hex.x === clickedHexPos.x && hex.y === clickedHexPos.y
             );

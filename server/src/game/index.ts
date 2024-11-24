@@ -141,6 +141,12 @@ export class Game {
             return false;
         }
 
+        // Check if destination is within map bounds
+        if (!this.isWithinMapBounds(destination)) {
+            console.log('Move failed: Destination out of map bounds', { destination });
+            return false;
+        }
+
         // Check if it's the unit owner's turn
         if (!this.isPlayerTurn(unit.playerId)) {
             console.log('Move failed: Not player\'s turn', {
@@ -159,39 +165,46 @@ export class Game {
             return false;
         }
 
-        // Calculate distance to ensure it's within movement range
-        const distance = this.getHexDistance(unit.position, destination);
-        if (distance > unit.movementPoints) {
-            console.log('Move failed: Destination out of range', {
+        // Get all possible movement positions
+        const reachableHexes = this.getHexesInRange(unit.position, unit.movementPoints);
+        const canMoveTo = reachableHexes.some(hex =>
+            hex.x === destination.x && hex.y === destination.y
+        );
+
+        if (!canMoveTo) {
+            console.log('Move failed: Destination not reachable', {
                 unitId,
-                distance,
+                destination,
                 movementPoints: unit.movementPoints
             });
             return false;
         }
 
-        const oldPosition = { ...unit.position };
-        // Update unit position and reduce movement points
+        const distance = this.getHexDistance(unit.position, destination);
         unit.position = destination;
         unit.movementPoints -= distance;
-
-        console.log('Unit moved successfully:', {
-            unitId,
-            from: oldPosition,
-            to: destination,
-            distance,
-            remainingMovementPoints: unit.movementPoints
-        });
 
         return true;
     }
 
     private getHexDistance(a: Position, b: Position): number {
+        // Convert to cube coordinates
+        const ac = this.offsetToCube(a);
+        const bc = this.offsetToCube(b);
+
+        // Calculate cube distance
         return Math.max(
-            Math.abs(a.x - b.x),
-            Math.abs(a.y - b.y),
-            Math.abs((a.x + a.y) - (b.x + b.y))
+            Math.abs(ac.x - bc.x),
+            Math.abs(ac.y - bc.y),
+            Math.abs(ac.z - bc.z)
         );
+    }
+
+    private offsetToCube(hex: Position): { x: number; y: number; z: number } {
+        const x = hex.x;
+        const z = hex.y - (hex.x + (hex.x & 1)) / 2;
+        const y = -x - z;
+        return { x, y, z };
     }
 
     public fortifyUnit(unitId: string): boolean {
@@ -204,5 +217,73 @@ export class Game {
 
     public get gameId(): string {
         return this._gameId;
+    }
+
+    private getNeighbors(hex: Position): Position[] {
+        const directions = hex.x % 2 === 1
+            ? [
+                { x: -1, y: 0 },  // top left
+                { x: -1, y: +1 }, // top right
+                { x: 0, y: +1 },  // right
+                { x: 0, y: -1 },  // left
+                { x: 1, y: 0 },   // bottom left
+                { x: 1, y: +1 }   // bottom right
+            ]
+            : [
+                { x: -1, y: -1 }, // top left
+                { x: -1, y: 0 },  // top right
+                { x: 0, y: +1 },  // right
+                { x: 0, y: -1 },  // left
+                { x: +1, y: -1 }, // bottom left
+                { x: +1, y: 0 }   // bottom right
+            ];
+
+        return directions.map(dir => ({
+            x: hex.x + dir.x,
+            y: hex.y + dir.y
+        }));
+    }
+
+    private getHexesInRange(center: Position, movementPoints: number): Position[] {
+        const visited = new Set<string>();
+        const result: Position[] = [];
+        const posToKey = (pos: Position) => `${pos.x},${pos.y}`;
+        const queue: Array<{ pos: Position, moves: number }> = [
+            { pos: center, moves: movementPoints }
+        ];
+
+        while (queue.length > 0) {
+            const current = queue.shift()!;
+            const currentKey = posToKey(current.pos);
+
+            if (visited.has(currentKey)) continue;
+
+            visited.add(currentKey);
+            if (current.pos !== center) {
+                result.push(current.pos);
+            }
+
+            if (current.moves > 0) {
+                const neighbors = this.getNeighbors(current.pos);
+                for (const neighbor of neighbors) {
+                    const neighborKey = posToKey(neighbor);
+                    if (!visited.has(neighborKey)) {
+                        queue.push({
+                            pos: neighbor,
+                            moves: current.moves - 1
+                        });
+                    }
+                }
+            }
+        }
+
+        return result;
+    }
+
+    private isWithinMapBounds(position: Position): boolean {
+        return position.x >= 0 &&
+               position.x < this.mapSize &&
+               position.y >= 0 &&
+               position.y < this.mapSize;
     }
 }
