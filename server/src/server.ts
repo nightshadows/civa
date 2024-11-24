@@ -117,6 +117,24 @@ wss.on('connection', (ws) => {
               message: 'Invalid move'
             }));
           }
+        } else if (data.action.type === 'END_TURN') {
+          gameAction.endTurn();
+
+          // Broadcast updated game state to all players
+          wss.clients.forEach(client => {
+            if (client.readyState === WebSocket.OPEN) {
+              const clientId = Array.from(playerSessions.entries())
+                .find(([_, gId]) => gId === gameId)?.[0];
+
+              if (clientId) {
+                const playerState = gameAction.getVisibleState(clientId);
+                client.send(JSON.stringify({
+                  type: 'game_state',
+                  state: playerState
+                }));
+              }
+            }
+          });
         }
         break;
       default:
