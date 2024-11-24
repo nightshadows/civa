@@ -17,43 +17,32 @@ const server = app.listen(3001, () => {
 });
 
 const wss = new WebSocket.Server({ port: 3000 });
-
 const games = new Map<string, Game>();
-let nextPlayerId = 1;  // Counter for generating player IDs
-const playerSessions = new Map<string, string>();  // Map to track game assignments
+const playerSessions = new Map<string, string>();  // playerId -> gameId
+const wsToPlayer = new Map<WebSocket, string>();   // WebSocket -> playerId
 
 wss.on('connection', (ws) => {
   console.log('Client connected');
-
-  let playerId: string;
-  let gameId: string;
 
   ws.on('message', (message) => {
     const data = JSON.parse(message.toString());
 
     switch (data.type) {
       case 'join_game':
-        gameId = data.gameId;
-
-        // Check if client provided a valid existing playerId
-        if (data.playerId && playerSessions.has(data.playerId)) {
-          playerId = data.playerId;
-          console.log(`Reconnecting existing player: ${playerId}`);
-        } else {
-          // Generate new player ID
-          playerId = `player${nextPlayerId++}`;
-          console.log(`Assigning new playerId: ${playerId}`);
-        }
+        const gameId = data.gameId;
+        const playerId = data.playerId;
+        
+        // Store WebSocket -> playerId mapping
+        wsToPlayer.set(ws, playerId);
+        console.log(`Associating client socket with playerId: ${playerId}`);
 
         // Create or join game
         if (!games.has(gameId)) {
-          console.log('Creating new game');
           games.set(gameId, new Game(12, [playerId], gameId));
           playerSessions.set(playerId, gameId);
         } else {
           const game = games.get(gameId)!;
-          // Only add player if they're new (not reconnecting)
-          if (!data.playerId || !playerSessions.has(data.playerId)) {
+          if (!playerSessions.has(playerId)) {
             if (game.canAddPlayer()) {
               game.addPlayer(playerId);
               playerSessions.set(playerId, gameId);
@@ -67,12 +56,6 @@ wss.on('connection', (ws) => {
           }
         }
 
-        // Send join confirmation with assigned playerId
-        ws.send(JSON.stringify({
-          type: 'joined_game',
-          playerId: playerId
-        }));
-
         // Send initial game state
         const game = games.get(gameId)!;
         ws.send(JSON.stringify({
@@ -80,10 +63,14 @@ wss.on('connection', (ws) => {
           state: game.getVisibleState(playerId)
         }));
         break;
+
       case 'action':
-        const gameAction = games.get(gameId);
-        if (!gameAction) return;
-        if (!gameAction.isPlayerTurn(playerId)) {
+        const actionPlayerId = wsToPlayer.get(ws);
+        const gameAction = games.get(playerSessions.get(actionPlayerId!)!);
+        
+        if (!gameAction || !actionPlayerId) return;
+
+        if (!gameAction.isPlayerTurn(actionPlayerId)) {
           ws.send(JSON.stringify({ type: 'error', message: 'Not your turn' }));
           return;
         }
@@ -95,22 +82,19 @@ wss.on('connection', (ws) => {
           );
 
           if (success) {
-            // Broadcast updated game state to all players
-            wss.clients.forEach(client => {
-              if (client.readyState === WebSocket.OPEN) {
-                // Get the specific player's state for each client
-                const clientId = Array.from(playerSessions.entries())
-                  .find(([_, gId]) => gId === gameId)?.[0];
-
-                if (clientId) {
-                  const playerState = gameAction.getVisibleState(clientId);
-                  client.send(JSON.stringify({
-                    type: 'game_state',
-                    state: playerState
-                  }));
+              // After processing action, broadcast state to all players
+              wss.clients.forEach(client => {
+                if (client.readyState === WebSocket.OPEN) {
+                  const clientPlayerId = wsToPlayer.get(client);
+                  if (clientPlayerId) {
+                    const playerState = gameAction.getVisibleState(clientPlayerId);
+                    client.send(JSON.stringify({
+                      type: 'game_state',
+                      state: playerState
+                    }));
+                  }
                 }
-              }
-            });
+              });
           } else {
             ws.send(JSON.stringify({
               type: 'error',
@@ -120,14 +104,12 @@ wss.on('connection', (ws) => {
         } else if (data.action.type === 'END_TURN') {
           gameAction.endTurn();
 
-          // Broadcast updated game state to all players
+          // After processing action, broadcast state to all players
           wss.clients.forEach(client => {
             if (client.readyState === WebSocket.OPEN) {
-              const clientId = Array.from(playerSessions.entries())
-                .find(([_, gId]) => gId === gameId)?.[0];
-
-              if (clientId) {
-                const playerState = gameAction.getVisibleState(clientId);
+              const clientPlayerId = wsToPlayer.get(client);
+              if (clientPlayerId) {
+                const playerState = gameAction.getVisibleState(clientPlayerId);
                 client.send(JSON.stringify({
                   type: 'game_state',
                   state: playerState
@@ -143,8 +125,8 @@ wss.on('connection', (ws) => {
   });
 
   ws.on('close', () => {
+    const playerId = wsToPlayer.get(ws);
     console.log('Client disconnected:', playerId);
-    // Note: We intentionally don't remove the player session
-    // so they can reconnect later
+    wsToPlayer.delete(ws);
   });
 });

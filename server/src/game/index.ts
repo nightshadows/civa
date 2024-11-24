@@ -120,13 +120,24 @@ export class Game {
             return visibleTilePositions.has(unitPos);
         });
 
-        return {
+        const state = {
             playerId,
             currentPlayerId: this.players[this.currentPlayerIndex],
             visibleTiles,
             visibleUnits,
             mapSize: this.mapSize
         };
+
+        console.log(`Sending state to player ${playerId}:`, {
+            currentPlayer: this.players[this.currentPlayerIndex],
+            visibleUnitCount: visibleUnits.length,
+            totalUnitCount: this.units.length,
+            visibleTileCount: visibleTiles.length,
+            ownedUnits: visibleUnits.filter(u => u.playerId === playerId).length,
+            enemyUnits: visibleUnits.filter(u => u.playerId !== playerId).length
+        });
+
+        return state;
     }
 
     public isPlayerTurn(playerId: string): boolean {
