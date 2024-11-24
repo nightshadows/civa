@@ -11,6 +11,7 @@ export class UIPanel {
     private levelUpText: Phaser.GameObjects.Text;
     private endTurnButton: Phaser.GameObjects.Rectangle;
     private endTurnText: Phaser.GameObjects.Text;
+    private playerList: Phaser.GameObjects.Text;
 
     constructor(scene: Phaser.Scene) {
         this.scene = scene;
@@ -33,6 +34,14 @@ export class UIPanel {
         this.unitInfo = this.scene.add.text(20, 620, '', {
             color: '#ffffff',
             fontSize: '16px'
+        });
+
+        // Player list (moved to bottom left)
+        this.playerList = this.scene.add.text(200, 620, '', {
+            color: '#ffffff',
+            fontSize: '16px',
+            backgroundColor: '#333333',
+            padding: { x: 10, y: 5 }
         });
 
         // Buttons
@@ -103,5 +112,17 @@ export class UIPanel {
 
     private onEndTurnClick() {
         this.scene.events.emit('end_turn');
+    }
+
+    public updatePlayerList(gameState: GameState) {
+        const players = gameState.players.map(id => {
+            const isCurrentPlayer = id === gameState.currentPlayerId;
+            const isMe = id === gameState.playerId;
+            return `${isMe ? 'You' : id }${isCurrentPlayer ? ' (*)' : ''}`;
+        });
+
+        this.playerList.setText(
+            'Players:\n' + players.join('\n')
+        );
     }
 }

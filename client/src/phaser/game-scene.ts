@@ -53,9 +53,7 @@ export class GameScene extends Phaser.Scene {
 
                     case 'game_state':
                         console.log('Received game state:', data.state);
-                        this.registry.set('gameState', data.state);
-                        this.renderMap(data.state.visibleTiles, data.state.visibleUnits);
-                        this.uiPanel.updateTurnInfo(data.state.currentPlayerId, data.state.playerId);
+                        this.handleGameState(data.state);
                         break;
 
                     case 'error':
@@ -425,6 +423,13 @@ export class GameScene extends Phaser.Scene {
                 payload: null
             }
         }));
+    }
+
+    private handleGameState(state: GameState) {
+        this.registry.set('gameState', state);
+        this.renderMap(state.visibleTiles, state.visibleUnits);
+        this.uiPanel.updateTurnInfo(state.currentPlayerId, state.playerId);
+        this.uiPanel.updatePlayerList(state);
     }
 
     preload() {

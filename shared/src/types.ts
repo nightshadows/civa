@@ -32,6 +32,7 @@ export interface Unit {
 export interface GameState {
     playerId: string;
     currentPlayerId: string;
+    players: string[];
     visibleTiles: Tile[];
     visibleUnits: Unit[];
     mapSize: number;
