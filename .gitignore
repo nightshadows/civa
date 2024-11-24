@@ -47,3 +47,5 @@ Thumbs.db
 
 # Parcel cache
 .parcel-cache/
+
+.vscode

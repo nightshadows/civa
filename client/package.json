@@ -4,10 +4,14 @@
   "scripts": {
     "prebuild": "cd ../shared && npm run build",
     "dev": "parcel src/index.html",
+    "dev3d": "parcel src/index3d.html",
     "build": "parcel build src/index.html --dist-dir public",
     "clean": "rm -rf .parcel-cache public"
   },
   "dependencies": {
+    "@babylonjs/core": "^7.35.1",
+    "@babylonjs/gui": "^7.35.1",
+    "@babylonjs/loaders": "^7.35.1",
     "phaser": "^3.70.0"
   },
   "devDependencies": {
