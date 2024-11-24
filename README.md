@@ -7,6 +7,9 @@ Prerequisites on Windows:
  winget install -e --id OpenJS.NodeJS
  Set-ExecutionPolicy -Scope CurrentUser Unrestricted
 
+./shared
+   npm install
+   npm run build
 ./server
    npm install
    npm run start
