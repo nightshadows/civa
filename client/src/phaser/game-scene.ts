@@ -136,41 +136,17 @@ export class GameScene extends Phaser.Scene {
         }));
     }
 
-    private getTileColor(type: TileType): number {
-        switch (type) {
-            case TileType.GRASS: return 0x7ec850;
-            case TileType.FOREST: return 0x2d5a27;
-            case TileType.HILLS: return 0x8b7355;
-            case TileType.WATER: return 0x4287f5;
-            default: return 0x000000;
-        }
-    }
-
-    private drawHex(x: number, y: number, color: number, position: Position): Phaser.GameObjects.Container {
+    private drawHex(x: number, y: number, tileType: TileType, position: Position): Phaser.GameObjects.Container {
         const container = new Phaser.GameObjects.Container(this, 0, 0);
 
-        // Draw the hex
-        const graphics = new Phaser.GameObjects.Graphics(this);
-        graphics.lineStyle(1, 0x000000, 0.5);
-        graphics.fillStyle(color);
+        // Get sprite key based on tile type
+        const spriteKey = this.getTileSprite(tileType);
 
-        const points: { x: number, y: number }[] = [];
-        for (let i = 0; i < 6; i++) {
-            const angle = (i * Math.PI) / 3;
-            points.push({
-                x: x + this.hexSize * Math.cos(angle),
-                y: y + this.hexSize * Math.sin(angle)
-            });
-        }
+        // Add the terrain sprite
+        const sprite = new Phaser.GameObjects.Sprite(this, x, y, spriteKey);
+        sprite.setScale(this.hexSize * 2 / sprite.width); // Scale to match hex size
 
-        graphics.beginPath();
-        graphics.moveTo(points[0].x, points[0].y);
-        points.forEach(point => graphics.lineTo(point.x, point.y));
-        graphics.closePath();
-        graphics.fillPath();
-        graphics.strokePath();
-
-        // Add position text
+        // Add coordinates text (you might want to remove this in production)
         const text = new Phaser.GameObjects.Text(this, x, y, `${position.x},${position.y}`, {
             color: '#000000',
             fontSize: '12px',
@@ -178,20 +154,30 @@ export class GameScene extends Phaser.Scene {
         });
         text.setOrigin(0.5, 0.5);
 
-        container.add([graphics, text]);
+        container.add([sprite, text]);
         return container;
+    }
+
+    private getTileSprite(type: TileType): string {
+        switch (type) {
+            case TileType.GRASS: return 'grass';
+            case TileType.FOREST: return 'forest';
+            case TileType.HILLS: return 'hills';
+            case TileType.WATER: return 'water';
+            default: return 'grass';
+        }
     }
 
     private drawUnit(unit: Unit, x: number, y: number): Phaser.GameObjects.Sprite {
         const isMyUnit = unit.playerId === this.playerId;
         const spriteKey = unit.type === UnitType.WARRIOR ? 'warrior' : 'archer';
         const sprite = this.add.sprite(x, y, spriteKey);
-        
+
         if (!isMyUnit) {
             sprite.setTint(0xff0000);
             sprite.setAlpha(0.5);
         }
-        
+
         sprite.setScale(1);
         return sprite;
     }
@@ -216,7 +202,7 @@ export class GameScene extends Phaser.Scene {
         tiles.forEach(tile => {
             const worldPos = this.view.hexToWorld(tile.position);
             const screenPos = this.view.worldToScreen(worldPos.x, worldPos.y);
-            const hex = this.drawHex(screenPos.x, screenPos.y, this.getTileColor(tile.type), tile.position);
+            const hex = this.drawHex(screenPos.x, screenPos.y, tile.type, tile.position);
             tilesContainer.add(hex);
         });
 
@@ -438,11 +424,17 @@ export class GameScene extends Phaser.Scene {
             frameWidth: 32,
             frameHeight: 32
         });
-        
+
         // Load archer sprite
         this.load.spritesheet('archer', 'assets/archer.png', {
             frameWidth: 32,
             frameHeight: 32
         });
+
+        // Add terrain sprites
+        this.load.image('grass', 'assets/terrain/grass.png');
+        this.load.image('forest', 'assets/terrain/forest.png');
+        this.load.image('hills', 'assets/terrain/hills.png');
+        this.load.image('water', 'assets/terrain/water.png');
     }
 }

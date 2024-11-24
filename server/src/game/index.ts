@@ -107,7 +107,7 @@ export class Game {
         const visibleTilePositions = new Set(
             visibleTiles.map(tile => `${tile.position.x},${tile.position.y}`)
         );
-        
+
         const visibleUnits = this.units.filter(unit => {
             if (unit.playerId === playerId) return true;
             const unitPos = `${unit.position.x},${unit.position.y}`;
@@ -300,7 +300,7 @@ export class Game {
     private getVisibleTilesForPlayer(playerId: string): Tile[] {
         const playerUnits = this.units.filter(unit => unit.playerId === playerId);
         const visibleTiles = new Set<string>();
-        
+
         // For each unit, calculate visible tiles based on vision range
         playerUnits.forEach(unit => {
             const tilesInRange = this.getHexesInRange(unit.position, unit.visionRange);
