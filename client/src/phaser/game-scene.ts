@@ -295,19 +295,19 @@ export class GameScene extends Phaser.Scene {
     }
 
     private highlightSelectedUnit(unit: Unit): void {
-        // Clear any existing selection
         if (this.selectedUnitSprite) {
             this.selectedUnitSprite.destroy();
         }
 
         const worldPos = this.view.hexToWorld(unit.position);
+        const screenPos = this.view.worldToScreen(worldPos.x, worldPos.y);
 
         // Create a new highlight for the selected unit
         const highlight = this.add.graphics();
         highlight.lineStyle(3, 0x00ff00, 1);  // Thick green border
 
-        // Draw circle around the unit
-        highlight.strokeCircle(worldPos.x, worldPos.y, this.hexSize - 5);
+        // Draw circle around the unit using screen coordinates
+        highlight.strokeCircle(screenPos.x, screenPos.y, this.hexSize - 5);
 
         this.selectedUnitSprite = highlight;
         this.uiPanel.updateUnitInfo(unit);
