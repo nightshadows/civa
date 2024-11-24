@@ -56,27 +56,37 @@ wss.on('connection', (ws) => {
           }
         }
 
-        // Send initial game state
-        const game = games.get(gameId)!;
-        ws.send(JSON.stringify({
-          type: 'game_state',
-          state: game.getVisibleState(playerId)
-        }));
+        const gameJoin = games.get(playerSessions.get(playerId!)!);
+        if (!gameJoin) return;
+
+        // Broadcast state to all players
+        wss.clients.forEach(client => {
+          if (client.readyState === WebSocket.OPEN) {
+            const clientPlayerId = wsToPlayer.get(client);
+            if (clientPlayerId) {
+              const playerState = gameJoin.getVisibleState(clientPlayerId);
+              client.send(JSON.stringify({
+                type: 'game_state',
+                state: playerState
+              }));
+            }
+          }
+        });
         break;
 
       case 'action':
         const actionPlayerId = wsToPlayer.get(ws);
-        const gameAction = games.get(playerSessions.get(actionPlayerId!)!);
+        const game = games.get(playerSessions.get(actionPlayerId!)!);
         
-        if (!gameAction || !actionPlayerId) return;
+        if (!game || !actionPlayerId) return;
 
-        if (!gameAction.isPlayerTurn(actionPlayerId)) {
+        if (!game.isPlayerTurn(actionPlayerId)) {
           ws.send(JSON.stringify({ type: 'error', message: 'Not your turn' }));
           return;
         }
 
         if (data.action.type === 'MOVE_UNIT') {
-          const success = gameAction.moveUnit(
+          const success = game.moveUnit(
             data.action.payload.unitId,
             data.action.payload.destination
           );
@@ -87,7 +97,7 @@ wss.on('connection', (ws) => {
                 if (client.readyState === WebSocket.OPEN) {
                   const clientPlayerId = wsToPlayer.get(client);
                   if (clientPlayerId) {
-                    const playerState = gameAction.getVisibleState(clientPlayerId);
+                    const playerState = game.getVisibleState(clientPlayerId);
                     client.send(JSON.stringify({
                       type: 'game_state',
                       state: playerState
@@ -102,14 +112,14 @@ wss.on('connection', (ws) => {
             }));
           }
         } else if (data.action.type === 'END_TURN') {
-          gameAction.endTurn();
+          game.endTurn();
 
           // After processing action, broadcast state to all players
           wss.clients.forEach(client => {
             if (client.readyState === WebSocket.OPEN) {
               const clientPlayerId = wsToPlayer.get(client);
               if (clientPlayerId) {
-                const playerState = gameAction.getVisibleState(clientPlayerId);
+                const playerState = game.getVisibleState(clientPlayerId);
                 client.send(JSON.stringify({
                   type: 'game_state',
                   state: playerState
