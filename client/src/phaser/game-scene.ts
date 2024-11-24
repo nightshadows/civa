@@ -244,7 +244,7 @@ export class GameScene extends Phaser.Scene {
         this.clearHighlights();
 
         const gameState = this.registry.get('gameState');
-        const mapSize = gameState?.visibleTiles.length ** 0.5; // Calculate map size from tiles
+        const mapSize = gameState.mapSize;
 
         // Get all hex coordinates within movement range
         const movementHexes = this.hexGrid.getHexesInRange(unit.position, unit.movementPoints, mapSize);
@@ -330,7 +330,7 @@ export class GameScene extends Phaser.Scene {
 
         const clickedUnit = this.findUnitAtPosition(pointer.x, pointer.y);
         const gameState = this.registry.get('gameState');
-        const mapSize = Math.sqrt(gameState.visibleTiles.length); // Calculate map size from tiles
+        const mapSize = gameState.mapSize;
 
         if (clickedUnit) {
             // If clicking on a unit that belongs to the player

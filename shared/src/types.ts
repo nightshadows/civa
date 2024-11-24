@@ -34,6 +34,7 @@ export interface GameState {
     currentPlayerId: string;
     visibleTiles: Tile[];
     visibleUnits: Unit[];
+    mapSize: number;
 }
 
 export interface GameAction {

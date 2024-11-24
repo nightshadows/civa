@@ -103,10 +103,7 @@ export class Game {
     }
 
     public getVisibleState(playerId: string): GameState {
-        // Only return tiles that are visible to the player's units
         const visibleTiles = this.getVisibleTilesForPlayer(playerId);
-        
-        // Only return units that are on visible tiles
         const visibleTilePositions = new Set(
             visibleTiles.map(tile => `${tile.position.x},${tile.position.y}`)
         );
@@ -119,7 +116,8 @@ export class Game {
             playerId,
             currentPlayerId: this.players[this.currentPlayerIndex],
             visibleTiles,
-            visibleUnits
+            visibleUnits,
+            mapSize: this.mapSize
         };
     }
 
