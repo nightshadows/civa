@@ -108,9 +108,17 @@ export class Game {
             visibleTiles.map(tile => `${tile.position.x},${tile.position.y}`)
         );
         
-        const visibleUnits = this.units.filter(unit => 
-            visibleTilePositions.has(`${unit.position.x},${unit.position.y}`)
-        );
+        // Filter units to only show:
+        // 1. Player's own units (always visible)
+        // 2. Enemy units that are in visible tiles
+        const visibleUnits = this.units.filter(unit => {
+            if (unit.playerId === playerId) {
+                return true; // Always show player's own units
+            }
+            // For enemy units, only show if they're in visible tiles
+            const unitPos = `${unit.position.x},${unit.position.y}`;
+            return visibleTilePositions.has(unitPos);
+        });
 
         return {
             playerId,
