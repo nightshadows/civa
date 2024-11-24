@@ -1,5 +1,5 @@
 import express from 'express';
-import { Game } from './game/Game';
+import { Game } from './game';
 import path from 'path';
 import cors from 'cors';
 import WebSocket from 'ws';

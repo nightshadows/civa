@@ -1,5 +1,5 @@
 import { TileType, Position, GameState, UnitType, Unit } from '@shared/types';
-import { HexGrid } from './HexGrid';
+import { HexGrid } from './hex-grid';
 
 export class GameScene extends Phaser.Scene {
     private hexSize: number;
