@@ -103,22 +103,23 @@ export class Game {
     }
 
     public getVisibleState(playerId: string): GameState {
-        // For now, return all tiles and units (we'll implement fog of war later)
-        const visibleTiles: Tile[] = [];
-        for (let y = 0; y < this.mapSize; y++) {
-            for (let x = 0; x < this.mapSize; x++) {
-                visibleTiles.push({
-                    type: this.map[y][x],
-                    position: { x, y }
-                });
-            }
-        }
+        // Only return tiles that are visible to the player's units
+        const visibleTiles = this.getVisibleTilesForPlayer(playerId);
+        
+        // Only return units that are on visible tiles
+        const visibleTilePositions = new Set(
+            visibleTiles.map(tile => `${tile.position.x},${tile.position.y}`)
+        );
+        
+        const visibleUnits = this.units.filter(unit => 
+            visibleTilePositions.has(`${unit.position.x},${unit.position.y}`)
+        );
 
         return {
             playerId,
             currentPlayerId: this.players[this.currentPlayerIndex],
             visibleTiles,
-            visibleUnits: this.units
+            visibleUnits
         };
     }
 
@@ -244,40 +245,37 @@ export class Game {
         }));
     }
 
-    private getHexesInRange(center: Position, movementPoints: number): Position[] {
+    private getHexesInRange(center: Position, range: number): Position[] {
+        const results: Position[] = [];
         const visited = new Set<string>();
-        const result: Position[] = [];
-        const posToKey = (pos: Position) => `${pos.x},${pos.y}`;
-        const queue: Array<{ pos: Position, moves: number }> = [
-            { pos: center, moves: movementPoints }
+        const queue: Array<{ pos: Position; distance: number }> = [
+            { pos: center, distance: 0 }
         ];
 
         while (queue.length > 0) {
             const current = queue.shift()!;
-            const currentKey = posToKey(current.pos);
+            const posKey = `${current.pos.x},${current.pos.y}`;
 
-            if (visited.has(currentKey)) continue;
+            if (visited.has(posKey)) continue;
+            visited.add(posKey);
 
-            visited.add(currentKey);
-            if (current.pos !== center) {
-                result.push(current.pos);
-            }
+            if (current.distance <= range) {
+                results.push(current.pos);
 
-            if (current.moves > 0) {
+                // Get neighbors using cube coordinates for accurate hex distance
                 const neighbors = this.getNeighbors(current.pos);
                 for (const neighbor of neighbors) {
-                    const neighborKey = posToKey(neighbor);
-                    if (!visited.has(neighborKey)) {
+                    if (!visited.has(`${neighbor.x},${neighbor.y}`)) {
                         queue.push({
                             pos: neighbor,
-                            moves: current.moves - 1
+                            distance: current.distance + 1
                         });
                     }
                 }
             }
         }
 
-        return result;
+        return results;
     }
 
     private isWithinMapBounds(position: Position): boolean {
@@ -285,5 +283,33 @@ export class Game {
                position.x < this.mapSize &&
                position.y >= 0 &&
                position.y < this.mapSize;
+    }
+
+    private getVisibleTilesForPlayer(playerId: string): Tile[] {
+        const playerUnits = this.units.filter(unit => unit.playerId === playerId);
+        const visibleTiles = new Set<string>();
+        
+        // For each unit, calculate visible tiles based on vision range
+        playerUnits.forEach(unit => {
+            const tilesInRange = this.getHexesInRange(unit.position, unit.visionRange);
+            tilesInRange.forEach(pos => {
+                // Only add tiles that are within map bounds
+                if (pos.x >= 0 && pos.x < this.mapSize && pos.y >= 0 && pos.y < this.mapSize) {
+                    visibleTiles.add(`${pos.x},${pos.y}`);
+                }
+            });
+        });
+
+        // Convert visible positions to Tile objects
+        const tiles: Tile[] = [];
+        visibleTiles.forEach(posKey => {
+            const [x, y] = posKey.split(',').map(Number);
+            tiles.push({
+                type: this.map[y][x],
+                position: { x, y }
+            });
+        });
+
+        return tiles;
     }
 }

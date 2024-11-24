@@ -1,15 +1,29 @@
 import { Position } from '@shared/types';
 
 export class HexGrid {
-    constructor() {}
+    private readonly hexSize: number;
 
-    // Get the distance between two hex coordinates
+    constructor(hexSize: number) {
+        this.hexSize = hexSize;
+    }
+
+    // Get the distance between two hex coordinates using cube coordinates
     getHexDistance(a: Position, b: Position): number {
+        const ac = this.offsetToCube(a);
+        const bc = this.offsetToCube(b);
+        
         return Math.max(
-            Math.abs(a.x - b.x),
-            Math.abs(a.y - b.y),
-            Math.abs((a.x + a.y) - (b.x + b.y))
+            Math.abs(ac.x - bc.x),
+            Math.abs(ac.y - bc.y),
+            Math.abs(ac.z - bc.z)
         );
+    }
+
+    private offsetToCube(hex: Position): { x: number; y: number; z: number } {
+        const x = hex.x;
+        const z = hex.y - (hex.x + (hex.x & 1)) / 2;
+        const y = -x - z;
+        return { x, y, z };
     }
 
     // Get the direct neighbors of a hex
@@ -40,42 +54,42 @@ export class HexGrid {
 
     // Get all hexes reachable within given movement points
     getHexesInRange(center: Position, movementPoints: number, mapSize: number): Position[] {
+        const results: Position[] = [];
         const visited = new Set<string>();
-        const result: Position[] = [];
-        const posToKey = (pos: Position) => `${pos.x},${pos.y}`;
-        const queue: Array<{ pos: Position, moves: number }> = [
-            { pos: center, moves: movementPoints }
+        const queue: Array<{ pos: Position; distance: number }> = [
+            { pos: center, distance: 0 }
         ];
-
-        const isWithinBounds = (pos: Position) =>
-            pos.x >= 0 && pos.x < mapSize && pos.y >= 0 && pos.y < mapSize;
 
         while (queue.length > 0) {
             const current = queue.shift()!;
-            const currentKey = posToKey(current.pos);
+            const posKey = `${current.pos.x},${current.pos.y}`;
 
-            if (visited.has(currentKey)) continue;
-            if (!isWithinBounds(current.pos)) continue;
+            if (visited.has(posKey)) continue;
+            visited.add(posKey);
 
-            visited.add(currentKey);
-            if (current.pos !== center) {
-                result.push(current.pos);
-            }
+            if (current.distance <= movementPoints) {
+                // Don't add the center position to results
+                if (current.distance > 0) {
+                    results.push(current.pos);
+                }
 
-            if (current.moves > 0) {
+                // Get neighbors using cube coordinates for accurate hex distance
                 const neighbors = this.getNeighbors(current.pos);
                 for (const neighbor of neighbors) {
-                    const neighborKey = posToKey(neighbor);
-                    if (!visited.has(neighborKey) && isWithinBounds(neighbor)) {
-                        queue.push({
-                            pos: neighbor,
-                            moves: current.moves - 1
-                        });
+                    // Check map bounds
+                    if (neighbor.x >= 0 && neighbor.x < mapSize && 
+                        neighbor.y >= 0 && neighbor.y < mapSize) {
+                        if (!visited.has(`${neighbor.x},${neighbor.y}`)) {
+                            queue.push({
+                                pos: neighbor,
+                                distance: current.distance + 1
+                            });
+                        }
                     }
                 }
             }
         }
 
-        return result;
+        return results;
     }
 }
