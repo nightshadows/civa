@@ -186,13 +186,15 @@ export class GameScene extends Phaser.Scene {
 
     private drawUnit(unit: Unit, x: number, y: number): Phaser.GameObjects.Sprite {
         const isMyUnit = unit.playerId === this.playerId;
-        const color = isMyUnit ? 0xffa500 : 0xff0000;
-        
         const spriteKey = unit.type === UnitType.WARRIOR ? 'warrior' : 'archer';
         const sprite = this.add.sprite(x, y, spriteKey);
-        sprite.setTint(color);
-        sprite.setScale(1);
         
+        if (!isMyUnit) {
+            sprite.setTint(0xff0000);
+            sprite.setAlpha(0.5);
+        }
+        
+        sprite.setScale(1);
         return sprite;
     }
 
