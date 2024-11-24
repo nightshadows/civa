@@ -28,6 +28,17 @@ export class GameScene extends Phaser.Scene {
         this.socket = data.socket;
         this.playerId = data.playerId;
 
+        // Create view with viewport dimensions
+        this.view = new View(
+            this.game.canvas.width,
+            this.game.canvas.height - 100,
+            this.hexSize
+        );
+
+        // Create UI Panel and map container early
+        this.uiPanel = new UIPanel(this);
+        this.mapContainer = this.add.container(0, 0);
+
         this.socket.addEventListener('message', (event) => {
             const data = JSON.parse(event.data);
 
@@ -59,15 +70,6 @@ export class GameScene extends Phaser.Scene {
     }
 
     create() {
-        // Create view with viewport dimensions
-        this.view = new View(
-            this.game.canvas.width,
-            this.game.canvas.height - 100,
-            this.hexSize
-        );
-
-        this.mapContainer = this.add.container(0, 0);
-
         // Center the view initially
         const gameState = this.registry.get('gameState');
         const mapWidth = gameState?.mapWidth || 14;
@@ -185,7 +187,7 @@ export class GameScene extends Phaser.Scene {
         const spriteKey = unit.type === UnitType.WARRIOR ? 'warrior' : 'archer';
         const sprite = this.add.sprite(x, y, spriteKey);
         sprite.setTint(color);
-        sprite.setScale(0.5);
+        sprite.setScale(1);
         
         return sprite;
     }
