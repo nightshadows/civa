@@ -185,7 +185,7 @@ export class GameScene extends Phaser.Scene {
 
     private drawUnit(unit: Unit, x: number, y: number): Phaser.GameObjects.Sprite {
         const isMyUnit = unit.playerId === this.playerId;
-        const color = isMyUnit ? 0x00ff00 : 0xff0000;
+        const color = isMyUnit ? 0xffa500 : 0xff0000;
         
         const spriteKey = unit.type === UnitType.WARRIOR ? 'warrior' : 'archer';
         const sprite = this.add.sprite(x, y, spriteKey);
@@ -312,7 +312,7 @@ export class GameScene extends Phaser.Scene {
 
         // Create a new highlight for the selected unit
         const highlight = this.add.graphics();
-        highlight.lineStyle(3, 0x00ff00, 1);  // Thick green border
+        highlight.lineStyle(3, 0xff8c00, 1);  // Changed from 0x00ff00 to 0xff8c00 (dark orange)
 
         // Draw circle around the unit using screen coordinates
         highlight.strokeCircle(screenPos.x, screenPos.y, this.hexSize - 5);
