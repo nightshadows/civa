@@ -59,28 +59,28 @@ export class HexGrid {
     getHexesInRange(center: Position, movementPoints: number): Position[] {
         const visited = new Set<string>();
         const result: Position[] = [];
-        
+
         // Helper function to create a unique key for a position
         const posToKey = (pos: Position) => `${pos.x},${pos.y}`;
-        
+
         // Queue entries contain position and remaining movement points
         const queue: Array<{ pos: Position, moves: number }> = [
             { pos: center, moves: movementPoints }
         ];
-        
+
         while (queue.length > 0) {
             const current = queue.shift()!;
             const currentKey = posToKey(current.pos);
-            
+
             // Skip if we've already visited this hex
             if (visited.has(currentKey)) continue;
-            
+
             // Mark as visited and add to result
             visited.add(currentKey);
             if (current.pos !== center) {  // Don't add the center hex
                 result.push(current.pos);
             }
-            
+
             // If we have moves remaining, add neighbors to queue
             if (current.moves > 0) {
                 const neighbors = this.getNeighbors(current.pos);
@@ -95,7 +95,7 @@ export class HexGrid {
                 }
             }
         }
-        
+
         return result;
     }
 
@@ -103,11 +103,11 @@ export class HexGrid {
     pixelToHex(x: number, y: number): Position {
         const width = this.hexSize * 2;
         const height = Math.sqrt(3) * this.hexSize;
-        
+
         // Rough approximation - you might want to improve this for better accuracy
         const col = Math.round(x / (width * 0.75));
         const row = Math.round((y - (col % 2) * height/2) / height);
-        
+
         return { x: col, y: row };
     }
-} 
+}

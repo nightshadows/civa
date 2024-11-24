@@ -90,7 +90,10 @@ export class GameScene extends Phaser.Scene {
         }
     }
 
-    private drawHex(x: number, y: number, color: number): Phaser.GameObjects.Graphics {
+    private drawHex(x: number, y: number, color: number, position: Position): Phaser.GameObjects.Container {
+        const container = new Phaser.GameObjects.Container(this, 0, 0);
+
+        // Draw the hex
         const graphics = new Phaser.GameObjects.Graphics(this);
         graphics.lineStyle(1, 0x000000, 0.5);
         graphics.fillStyle(color);
@@ -111,7 +114,16 @@ export class GameScene extends Phaser.Scene {
         graphics.fillPath();
         graphics.strokePath();
 
-        return graphics;
+        // Add position text
+        const text = new Phaser.GameObjects.Text(this, x, y, `${position.x},${position.y}`, {
+            color: '#000000',
+            fontSize: '12px',
+            align: 'center'
+        });
+        text.setOrigin(0.5, 0.5);
+
+        container.add([graphics, text]);
+        return container;
     }
 
     private drawUnit(unit: Unit, x: number, y: number): Phaser.GameObjects.Text {
@@ -145,7 +157,7 @@ export class GameScene extends Phaser.Scene {
         // Draw tiles first
         tiles.forEach(tile => {
             const pixelPos = this.hexGrid.hexToPixel(tile.position);
-            const hex = this.drawHex(pixelPos.x, pixelPos.y, this.getTileColor(tile.type));
+            const hex = this.drawHex(pixelPos.x, pixelPos.y, this.getTileColor(tile.type), tile.position);
             tilesContainer.add(hex);
         });
 
