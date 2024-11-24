@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import { GameScene } from './game/GameScene';
+import { GameScene } from './phaser/GameScene';
 
 // Get or create persistent playerId
 const getOrCreatePlayerId = (): string => {
