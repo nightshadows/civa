@@ -52,13 +52,12 @@ wss.on('connection', (ws) => {
           playerSessions.set(playerId, gameId);
         } else {
           const game = games.get(gameId)!;
-          // Add player to existing game if possible
-          if (game.canAddPlayer()) {
-            game.addPlayer(playerId);
-            playerSessions.set(playerId, gameId);
-          } else {
-            // Check if this player was already in the game
-            if (playerSessions.get(playerId) !== gameId) {
+          // Only add player if they're new (not reconnecting)
+          if (!data.playerId || !playerSessions.has(data.playerId)) {
+            if (game.canAddPlayer()) {
+              game.addPlayer(playerId);
+              playerSessions.set(playerId, gameId);
+            } else {
               ws.send(JSON.stringify({
                 type: 'error',
                 message: 'Game is full'
@@ -101,7 +100,7 @@ wss.on('connection', (ws) => {
               if (client.readyState === WebSocket.OPEN) {
                 // Get the specific player's state for each client
                 const clientId = Array.from(playerSessions.entries())
-                  .find(([_, gameId]) => gameId === gameAction.gameId)?.[0];
+                  .find(([_, gId]) => gId === gameId)?.[0];
 
                 if (clientId) {
                   const playerState = gameAction.getVisibleState(clientId);
