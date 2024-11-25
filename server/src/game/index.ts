@@ -17,7 +17,13 @@ export class Game {
         this._gameId = gameId;
         this.currentPlayerIndex = 0;
         this.map = this.generateMap();
-        this.units = this.initializeUnits();
+        this.units = [];
+
+        // Initialize units for initial players
+        players.forEach((playerId, index) => {
+            const playerUnits = this.initializeUnitsForPlayer(playerId, index);
+            this.units.push(...playerUnits);
+        });
     }
 
     public canAddPlayer(): boolean {
@@ -35,9 +41,61 @@ export class Game {
     }
 
     private initializeUnitsForPlayer(playerId: string, playerIndex: number): Unit[] {
+        const isPositionOccupied = (pos: Position): boolean => {
+            return this.units.some(unit =>
+                unit.position.x === pos.x &&
+                unit.position.y === pos.y
+            );
+        };
+
+        const findValidSpawnPosition = (baseX: number, baseY: number): Position => {
+            const visited = new Set<string>();
+            const queue: Position[] = [{ x: baseX, y: baseY }];
+
+            while (queue.length > 0) {
+                const current = queue.shift()!;
+                const posKey = `${current.x},${current.y}`;
+
+                if (visited.has(posKey)) continue;
+                visited.add(posKey);
+
+                // Check if current position is valid and not occupied
+                if (this.isWithinMapBounds(current) &&
+                    getMovementCost(this.map[current.y][current.x]) !== null &&
+                    !isPositionOccupied(current)) {
+                    return current;
+                }
+
+                const neighbors = this.getNeighbors(current);
+                for (const neighbor of neighbors) {
+                    if (!visited.has(`${neighbor.x},${neighbor.y}`)) {
+                        queue.push(neighbor);
+                    }
+                }
+            }
+            throw new Error('No valid spawn position found');
+        };
+
         const baseX = playerIndex === 0 ? 5 : this.mapSize - 5;
         const baseY = playerIndex === 0 ? 5 : this.mapSize - 5;
-        return getStartingUnits(playerId, { x: baseX, y: baseY });
+
+        const units: Unit[] = [];
+
+        // Create and place warrior
+        const warriorPos = findValidSpawnPosition(baseX, baseY);
+        const warrior = createUnit(UnitType.WARRIOR, playerId, warriorPos);
+        units.push(warrior);
+        this.units.push(warrior);  // Add to game units immediately
+
+        // Create and place archer
+        const archerPos = findValidSpawnPosition(warriorPos.x, warriorPos.y);
+        const archer = createUnit(UnitType.ARCHER, playerId, archerPos);
+        units.push(archer);
+
+        // Remove warrior from game units (it will be added back with archer when returned)
+        this.units.pop();
+
+        return units;
     }
 
     private generateMap(): TileType[][] {
@@ -149,16 +207,6 @@ export class Game {
         }
 
         return map;
-    }
-
-    private initializeUnits(): Unit[] {
-        const units: Unit[] = [];
-        this.players.forEach((playerId, index) => {
-            const baseX = index === 0 ? 6 : this.mapSize - 5;
-            const baseY = index === 0 ? 5 : this.mapSize - 5;
-            units.push(...getStartingUnits(playerId, { x: baseX, y: baseY }));
-        });
-        return units;
     }
 
     public getVisibleState(playerId: string): GameState {
