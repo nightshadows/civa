@@ -175,17 +175,45 @@ export class GameScene extends Phaser.Scene {
         }
     }
 
-    private drawUnit(unit: Unit, x: number, y: number): Phaser.GameObjects.Sprite {
+    private drawUnit(unit: Unit, x: number, y: number): Phaser.GameObjects.Container {
+        const container = new Phaser.GameObjects.Container(this, x, y);
+
+        // Create unit sprite
         const isMyUnit = unit.playerId === this.playerId;
         const spriteKey = unit.type === UnitType.WARRIOR ? 'warrior' : 'archer';
-        const sprite = this.add.sprite(x, y, spriteKey);
+        const sprite = this.add.sprite(0, 0, spriteKey);
 
         if (!isMyUnit) {
             sprite.setTint(0xff0000);
             sprite.setAlpha(0.5);
         }
 
-        return sprite;
+        // Add health bar
+        const healthBarWidth = 30;
+        const healthBarHeight = 4;
+        const healthBarY = -sprite.height/2 - 8; // Changed from -10 to -8
+
+        // Health bar background (red)
+        const healthBarBg = this.add.rectangle(
+            0,
+            healthBarY,
+            healthBarWidth,
+            healthBarHeight,
+            0xff0000
+        );
+
+        // Health bar fill (green)
+        const healthPercent = unit.currentHp / unit.maxHp;
+        const healthBarFill = this.add.rectangle(
+            -healthBarWidth/2 + (healthBarWidth * healthPercent)/2,
+            healthBarY,
+            healthBarWidth * healthPercent,
+            healthBarHeight,
+            0x00ff00
+        );
+
+        container.add([sprite, healthBarBg, healthBarFill]);
+        return container;
     }
 
     public renderMap(tiles: { type: TileType; position: Position }[], units: Unit[] = []): void {

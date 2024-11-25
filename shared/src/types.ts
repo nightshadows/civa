@@ -27,6 +27,13 @@ export interface Unit {
     playerId: string;
     movementPoints: number;
     visionRange: number;
+    currentHp: number;
+    maxHp: number;
+    currentExp: number;
+    expNeeded: number;
+    level: number;
+    attack: number;
+    defense: number;
 }
 
 export interface GameState {

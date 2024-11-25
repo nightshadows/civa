@@ -4,18 +4,30 @@ interface UnitTemplate {
     type: UnitType;
     movementPoints: number;
     visionRange: number;
+    maxHp: number;
+    baseAttack: number;
+    baseDefense: number;
+    expNeededBase: number;
 }
 
 const UNIT_TEMPLATES: Record<UnitType, UnitTemplate> = {
     [UnitType.WARRIOR]: {
         type: UnitType.WARRIOR,
         movementPoints: 2,
-        visionRange: 4
+        visionRange: 4,
+        maxHp: 100,
+        baseAttack: 15,
+        baseDefense: 10,
+        expNeededBase: 100
     },
     [UnitType.ARCHER]: {
         type: UnitType.ARCHER,
         movementPoints: 2,
-        visionRange: 4
+        visionRange: 4,
+        maxHp: 75,
+        baseAttack: 20,
+        baseDefense: 5,
+        expNeededBase: 100
     }
 };
 
@@ -27,7 +39,14 @@ export function createUnit(type: UnitType, playerId: string, position: Position)
         position,
         playerId,
         movementPoints: template.movementPoints,
-        visionRange: template.visionRange
+        visionRange: template.visionRange,
+        currentHp: template.maxHp,
+        maxHp: template.maxHp,
+        currentExp: 0,
+        expNeeded: template.expNeededBase,
+        level: 1,
+        attack: template.baseAttack,
+        defense: template.baseDefense
     };
 }
 

@@ -3,7 +3,7 @@ import { Unit } from '@shared/types';
 export class UIPanel {
     private scene: Phaser.Scene;
     private background: Phaser.GameObjects.Rectangle;
-    private unitInfo: Phaser.GameObjects.Text;
+    private unitInfoTexts: Phaser.GameObjects.Text[] = [];
     private turnInfo: Phaser.GameObjects.Text;
     private fortifyButton: Phaser.GameObjects.Rectangle;
     private fortifyText: Phaser.GameObjects.Text;
@@ -20,31 +20,37 @@ export class UIPanel {
 
     private createPanel() {
         // Panel background
-        this.background = this.scene.add.rectangle(0, 600, 800, 100, 0x333333)
+        this.background = this.scene.add.rectangle(0, 600, 800, 100, 0x222222)
             .setOrigin(0, 0);
 
         // Turn info text
         this.turnInfo = this.scene.add.text(700, 620, '', {
             color: '#ffffff',
-            fontSize: '16px',
-            align: 'right'
+            fontSize: '14px',
+            align: 'right',
+            fontFamily: 'Arial',
+            fontStyle: 'bold'
         });
 
-        // Unit info area
-        this.unitInfo = this.scene.add.text(20, 620, '', {
-            color: '#ffffff',
-            fontSize: '16px'
-        });
+        // Create array of text objects for unit info
+        for (let i = 0; i < 5; i++) {
+            const text = this.scene.add.text(20, 610 + i * 16, '', {
+                color: '#ffffff',
+                fontSize: '12px',
+                fontFamily: 'Arial'
+            });
+            this.unitInfoTexts.push(text);
+        }
 
-        // Player list (moved to bottom left)
-        this.playerList = this.scene.add.text(200, 620, '', {
+        // Player list
+        this.playerList = this.scene.add.text(200, 610, '', {
             color: '#ffffff',
-            fontSize: '16px',
+            fontSize: '12px',
+            fontFamily: 'Arial',
             backgroundColor: '#333333',
-            padding: { x: 10, y: 5 }
+            padding: { x: 8, y: 4 }
         });
 
-        // Buttons
         this.createButtons();
     }
 
@@ -78,20 +84,26 @@ export class UIPanel {
 
     public updateUnitInfo(unit: Unit | null) {
         if (!unit) {
-            this.unitInfo.setText('');
+            this.unitInfoTexts.forEach(text => text.setText(''));
             this.fortifyButton.setFillStyle(0x666666);
             this.levelUpButton.setFillStyle(0x666666);
             return;
         }
 
-        this.unitInfo.setText(
-            `${unit.type}\nMovement: ${unit.movementPoints}\nVision: ${unit.visionRange}`
-        );
+        const healthPercent = Math.round((unit.currentHp / unit.maxHp) * 100);
+        const expPercent = Math.round((unit.currentExp / unit.expNeeded) * 100);
+        const healthColor = healthPercent > 66 ? '#44ff44' : healthPercent > 33 ? '#ffff44' : '#ff4444';
+
+        // Update each line with appropriate colors
+        this.unitInfoTexts[0].setText(`${unit.type} (Level ${unit.level})`).setColor('#ff4444');
+        this.unitInfoTexts[1].setText(`HP: ${unit.currentHp}/${unit.maxHp} (${healthPercent}%)`).setColor(healthColor);
+        this.unitInfoTexts[2].setText(`ATK: ${unit.attack}  DEF: ${unit.defense}`).setColor('#999999');
+        this.unitInfoTexts[3].setText(`EXP: ${unit.currentExp}/${unit.expNeeded} (${expPercent}%)`).setColor('#999999');
+        this.unitInfoTexts[4].setText(`Movement: ${unit.movementPoints}  Vision: ${unit.visionRange}`).setColor('#ffffff');
 
         // Update button states
         this.fortifyButton.setFillStyle(unit.movementPoints > 0 ? 0x44aa44 : 0x666666);
-        // For now, level up is always disabled as we haven't implemented experience
-        this.levelUpButton.setFillStyle(0x666666);
+        this.levelUpButton.setFillStyle(unit.currentExp >= unit.expNeeded ? 0x44aa44 : 0x666666);
     }
 
     public updateTurnInfo(currentPlayerId: string, myPlayerId: string) {
