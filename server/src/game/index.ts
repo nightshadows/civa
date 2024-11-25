@@ -1,5 +1,6 @@
 import { TileType, Position, Unit, GameState, UnitType, Tile } from '../../../shared/src/types';
 import { getStartingUnits, createUnit, resetUnitMovement } from './units';
+import { getMovementCost } from '../../../shared/src/terrain';
 
 export class Game {
     private map: TileType[][];
@@ -205,56 +206,71 @@ export class Game {
             .forEach(resetUnitMovement);
     }
 
+    private findPath(start: Position, destination: Position, maxMovement: number): Position[] | null {
+        const queue: Array<{ pos: Position; path: Position[]; cost: number }> = [{
+            pos: start,
+            path: [],
+            cost: 0
+        }];
+        const visited = new Set<string>();
+
+        while (queue.length > 0) {
+            const current = queue.shift()!;
+            const posKey = `${current.pos.x},${current.pos.y}`;
+
+            if (visited.has(posKey)) continue;
+            visited.add(posKey);
+
+            if (current.pos.x === destination.x && current.pos.y === destination.y) {
+                return current.path;
+            }
+
+            const neighbors = this.getNeighbors(current.pos);
+            for (const neighbor of neighbors) {
+                if (!this.isWithinMapBounds(neighbor)) continue;
+
+                const terrainCost = getMovementCost(this.map[neighbor.y][neighbor.x]);
+                if (terrainCost === null) continue; // Skip impassable terrain
+
+                const newCost = current.cost + terrainCost;
+                if (newCost <= maxMovement) {
+                    queue.push({
+                        pos: neighbor,
+                        path: [...current.path, neighbor],
+                        cost: newCost
+                    });
+                }
+            }
+        }
+
+        return null;
+    }
+
     public moveUnit(unitId: string, destination: Position): boolean {
         const unit = this.units.find(u => u.id === unitId);
-        if (!unit) {
-            console.log('Move failed: Unit not found', { unitId });
-            return false;
-        }
+        if (!unit) return false;
+        if (!this.isWithinMapBounds(destination)) return false;
+        if (!this.isPlayerTurn(unit.playerId)) return false;
+        if (unit.movementPoints <= 0) return false;
 
-        // Check if destination is within map bounds
-        if (!this.isWithinMapBounds(destination)) {
-            console.log('Move failed: Destination out of map bounds', { destination });
-            return false;
-        }
+        // Check if destination terrain is passable
+        const destTerrainCost = getMovementCost(this.map[destination.y][destination.x]);
+        if (destTerrainCost === null) return false;
 
-        // Check if it's the unit owner's turn
-        if (!this.isPlayerTurn(unit.playerId)) {
-            console.log('Move failed: Not player\'s turn', {
-                unitId,
-                playerId: unit.playerId
-            });
-            return false;
-        }
+        // Find path considering terrain costs
+        const path = this.findPath(unit.position, destination, unit.movementPoints);
+        if (!path) return false;
 
-        // Check if unit has movement points
-        if (unit.movementPoints <= 0) {
-            console.log('Move failed: No movement points remaining', {
-                unitId,
-                movementPoints: unit.movementPoints
-            });
-            return false;
-        }
+        // Calculate total movement cost along the path
+        const totalCost = path.reduce((cost, pos) => {
+            const terrainCost = getMovementCost(this.map[pos.y][pos.x]);
+            return cost + (terrainCost || 0);
+        }, 0);
 
-        // Get all possible movement positions
-        const reachableHexes = this.getHexesInRange(unit.position, unit.movementPoints);
-        const canMoveTo = reachableHexes.some(hex =>
-            hex.x === destination.x && hex.y === destination.y
-        );
+        if (totalCost > unit.movementPoints) return false;
 
-        if (!canMoveTo) {
-            console.log('Move failed: Destination not reachable', {
-                unitId,
-                destination,
-                movementPoints: unit.movementPoints
-            });
-            return false;
-        }
-
-        const distance = this.getHexDistance(unit.position, destination);
         unit.position = destination;
-        unit.movementPoints -= distance;
-
+        unit.movementPoints -= totalCost;
         return true;
     }
 
@@ -315,37 +331,40 @@ export class Game {
         }));
     }
 
-    private getHexesInRange(center: Position, range: number): Position[] {
-        const results: Position[] = [];
+    private getHexesInRange(center: Position, movementPoints: number): Position[] {
         const visited = new Set<string>();
-        const queue: Array<{ pos: Position; distance: number }> = [
-            { pos: center, distance: 0 }
+        const result: Position[] = [];
+        const posToKey = (pos: Position) => `${pos.x},${pos.y}`;
+        const queue: Array<{ pos: Position, moves: number }> = [
+            { pos: center, moves: movementPoints }
         ];
 
         while (queue.length > 0) {
             const current = queue.shift()!;
-            const posKey = `${current.pos.x},${current.pos.y}`;
+            const currentKey = posToKey(current.pos);
 
-            if (visited.has(posKey)) continue;
-            visited.add(posKey);
+            if (visited.has(currentKey)) continue;
+            visited.add(currentKey);
 
-            if (current.distance <= range) {
-                results.push(current.pos);
+            if (current.pos !== center) {
+                result.push(current.pos);
+            }
 
-                // Get neighbors using cube coordinates for accurate hex distance
+            if (current.moves > 0) {
                 const neighbors = this.getNeighbors(current.pos);
                 for (const neighbor of neighbors) {
-                    if (!visited.has(`${neighbor.x},${neighbor.y}`)) {
+                    const neighborKey = posToKey(neighbor);
+                    if (!visited.has(neighborKey)) {
                         queue.push({
                             pos: neighbor,
-                            distance: current.distance + 1
+                            moves: current.moves - 1
                         });
                     }
                 }
             }
         }
 
-        return results;
+        return result;
     }
 
     private isWithinMapBounds(position: Position): boolean {
@@ -359,12 +378,16 @@ export class Game {
         const playerUnits = this.units.filter(unit => unit.playerId === playerId);
         const visibleTiles = new Set<string>();
 
-        // For each unit, calculate visible tiles based on vision range
+        // First, add tiles where units are standing
+        playerUnits.forEach(unit => {
+            visibleTiles.add(`${unit.position.x},${unit.position.y}`);
+        });
+
+        // Then add tiles in vision range
         playerUnits.forEach(unit => {
             const tilesInRange = this.getHexesInRange(unit.position, unit.visionRange);
             tilesInRange.forEach(pos => {
-                // Only add tiles that are within map bounds
-                if (pos.x >= 0 && pos.x < this.mapSize && pos.y >= 0 && pos.y < this.mapSize) {
+                if (this.isWithinMapBounds(pos)) {
                     visibleTiles.add(`${pos.x},${pos.y}`);
                 }
             });

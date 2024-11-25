@@ -185,27 +185,18 @@ export class GameScene extends Phaser.Scene {
             sprite.setAlpha(0.5);
         }
 
-        sprite.setScale(1);
         return sprite;
     }
 
     public renderMap(tiles: { type: TileType; position: Position }[], units: Unit[] = []): void {
-        console.log('Rendering map with units:', units);
-        this.clearSelection();
-
-        // Destroy all existing children
         this.mapContainer.removeAll(true);
-        console.log('Cleared map container');
 
-        // Create a new container for tiles
         const tilesContainer = new Phaser.GameObjects.Container(this, 0, 0);
-        this.mapContainer.add(tilesContainer);
-
-        // Create a new container for units
         const unitsContainer = new Phaser.GameObjects.Container(this, 0, 0);
+
+        this.mapContainer.add(tilesContainer);
         this.mapContainer.add(unitsContainer);
 
-        // Draw tiles first
         tiles.forEach(tile => {
             const worldPos = this.view.hexToWorld(tile.position);
             const screenPos = this.view.worldToScreen(worldPos.x, worldPos.y);
@@ -213,16 +204,13 @@ export class GameScene extends Phaser.Scene {
             tilesContainer.add(hex);
         });
 
-        // Draw units on top
         units.forEach(unit => {
             const worldPos = this.view.hexToWorld(unit.position);
             const screenPos = this.view.worldToScreen(worldPos.x, worldPos.y);
-            console.log('Drawing unit at position:', unit.position, 'screen pos:', screenPos);
             const unitSprite = this.drawUnit(unit, screenPos.x, screenPos.y);
             unitsContainer.add(unitSprite);
         });
 
-        // Restore selection if needed
         if (this.selectedUnit) {
             const stillExists = units.find(u => u.id === this.selectedUnit?.id);
             if (stillExists) {
@@ -241,20 +229,27 @@ export class GameScene extends Phaser.Scene {
 
     private showMovementRange(unit: Unit): void {
         this.clearHighlights();
-
         const gameState = this.registry.get('gameState');
-        const mapSize = gameState.mapSize;
+        const mapData = gameState.visibleTiles.reduce((acc: TileType[][], tile) => {
+            if (!acc[tile.position.y]) acc[tile.position.y] = [];
+            acc[tile.position.y][tile.position.x] = tile.type;
+            return acc;
+        }, []);
 
-        // Get all hex coordinates within movement range
-        const movementHexes = this.hexGrid.getHexesInRange(unit.position, unit.movementPoints, mapSize);
+        const movementHexes = this.hexGrid.getHexesInRange(
+            unit.position,
+            unit.movementPoints,
+            gameState.mapSize,
+            mapData
+        );
 
-        // Remove the unit's current position from the highlights
-        const reachableHexes = movementHexes.filter(hex =>
+        // Only filter out center position for highlighting
+        const highlightHexes = movementHexes.filter(hex =>
             !(hex.x === unit.position.x && hex.y === unit.position.y)
         );
 
         // Draw highlights for each hex
-        reachableHexes.forEach(hexPos => {
+        highlightHexes.forEach(hexPos => {
             const worldPos = this.view.hexToWorld(hexPos);
             const screenPos = this.view.worldToScreen(worldPos.x, worldPos.y);
             const highlight = this.drawHexHighlight(screenPos.x, screenPos.y);
@@ -318,6 +313,14 @@ export class GameScene extends Phaser.Scene {
     private handleHexClick(pointer: Phaser.Input.Pointer): void {
         const clickedHexPos = this.view.screenToHex(pointer.x, pointer.y);
         const worldPos = this.view.screenToWorld(pointer.x, pointer.y);
+        const gameState = this.registry.get('gameState');
+
+        // Create map data for movement calculation
+        const mapData = gameState.visibleTiles.reduce((acc: TileType[][], tile) => {
+            if (!acc[tile.position.y]) acc[tile.position.y] = [];
+            acc[tile.position.y][tile.position.x] = tile.type;
+            return acc;
+        }, []);
 
         // Update debug text
         this.debugText.setText(
@@ -328,17 +331,12 @@ export class GameScene extends Phaser.Scene {
         );
 
         const clickedUnit = this.findUnitAtPosition(pointer.x, pointer.y);
-        const gameState = this.registry.get('gameState');
-        const mapSize = gameState.mapSize;
 
         if (clickedUnit) {
-            // If clicking on a unit that belongs to the player
             if (clickedUnit.playerId === this.playerId) {
-                // If clicking on the same unit that's already selected, deselect it
                 if (this.selectedUnit === clickedUnit) {
                     this.clearSelection();
                 } else {
-                    // Select the new unit
                     this.selectedUnit = clickedUnit;
                     this.highlightSelectedUnit(clickedUnit);
                     this.showMovementRange(clickedUnit);
@@ -349,14 +347,15 @@ export class GameScene extends Phaser.Scene {
             const movementHexes = this.hexGrid.getHexesInRange(
                 this.selectedUnit.position,
                 this.selectedUnit.movementPoints,
-                mapSize
+                gameState.mapSize,
+                mapData
             );
+
             const canMoveTo = movementHexes.some(hex =>
                 hex.x === clickedHexPos.x && hex.y === clickedHexPos.y
             );
 
             if (canMoveTo) {
-                // Send move action to server
                 this.socket.send(JSON.stringify({
                     type: 'action',
                     action: {
