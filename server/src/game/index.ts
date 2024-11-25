@@ -10,6 +10,7 @@ export class Game {
     private mapSize: number;
     private readonly MAX_PLAYERS = 2;
     private _gameId: string;
+    private turnNumber: number = 1;
 
     constructor(mapSize: number, players: string[], gameId: string) {
         this.mapSize = mapSize;
@@ -221,25 +222,15 @@ export class Game {
             return visibleTilePositions.has(unitPos);
         });
 
-        const state = {
+        return {
             playerId,
             currentPlayerId: this.players[this.currentPlayerIndex],
             players: this.players,
             visibleTiles,
             visibleUnits,
-            mapSize: this.mapSize
+            mapSize: this.mapSize,
+            turnNumber: this.turnNumber
         };
-
-        console.log(`Sending state to player ${playerId}:`, {
-            currentPlayer: this.players[this.currentPlayerIndex],
-            visibleUnitCount: visibleUnits.length,
-            totalUnitCount: this.units.length,
-            visibleTileCount: visibleTiles.length,
-            ownedUnits: visibleUnits.filter(u => u.playerId === playerId).length,
-            enemyUnits: visibleUnits.filter(u => u.playerId !== playerId).length
-        });
-
-        return state;
     }
 
     public isPlayerTurn(playerId: string): boolean {
@@ -248,6 +239,11 @@ export class Game {
 
     public endTurn(): void {
         this.currentPlayerIndex = (this.currentPlayerIndex + 1) % this.players.length;
+
+        if (this.currentPlayerIndex === 0) {
+            this.turnNumber++;
+        }
+
         // Reset movement points for new player's units
         this.units
             .filter(unit => unit.playerId === this.players[this.currentPlayerIndex])

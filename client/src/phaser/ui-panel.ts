@@ -12,6 +12,7 @@ export class UIPanel {
     private endTurnButton: Phaser.GameObjects.Rectangle;
     private endTurnText: Phaser.GameObjects.Text;
     private playerList: Phaser.GameObjects.Text;
+    private turnNumberText: Phaser.GameObjects.Text;
 
     constructor(scene: Phaser.Scene) {
         this.scene = scene;
@@ -49,6 +50,13 @@ export class UIPanel {
             fontFamily: 'Arial',
             backgroundColor: '#333333',
             padding: { x: 8, y: 4 }
+        });
+
+        // Add turn number text
+        this.turnNumberText = this.scene.add.text(700, 650, '', {
+            color: '#ffffff',
+            fontSize: '12px',
+            fontFamily: 'Arial'
         });
 
         this.createButtons();
@@ -106,11 +114,12 @@ export class UIPanel {
         this.levelUpButton.setFillStyle(unit.currentExp >= unit.expNeeded ? 0x44aa44 : 0x666666);
     }
 
-    public updateTurnInfo(currentPlayerId: string, myPlayerId: string) {
+    public updateTurnInfo(currentPlayerId: string, myPlayerId: string, turnNumber: number) {
         const isMyTurn = currentPlayerId === myPlayerId;
         this.turnInfo.setText(isMyTurn ? 'Your Turn' : 'Enemy Turn');
         this.turnInfo.setColor(isMyTurn ? '#44ff44' : '#ff4444');
         this.endTurnButton.setFillStyle(isMyTurn ? 0x44aa44 : 0x666666);
+        this.turnNumberText.setText(`Turn ${turnNumber}`);
     }
 
     private onFortifyClick() {

@@ -40,9 +40,10 @@ export interface GameState {
     playerId: string;
     currentPlayerId: string;
     players: string[];
-    visibleTiles: Tile[];
+    visibleTiles: { type: TileType; position: Position }[];
     visibleUnits: Unit[];
     mapSize: number;
+    turnNumber: number;
 }
 
 export interface GameAction {

@@ -449,7 +449,7 @@ export class GameScene extends Phaser.Scene {
     private handleGameState(state: GameState) {
         this.registry.set('gameState', state);
         this.renderMap(state.visibleTiles, state.visibleUnits);
-        this.uiPanel.updateTurnInfo(state.currentPlayerId, state.playerId);
+        this.uiPanel.updateTurnInfo(state.currentPlayerId, state.playerId, state.turnNumber);
         this.uiPanel.updatePlayerList(state);
     }
 
