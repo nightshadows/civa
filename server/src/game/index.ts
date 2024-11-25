@@ -59,18 +59,113 @@ export class Game {
     }
 
     private generateMap(): TileType[][] {
-        // Simple random map generation
         const map: TileType[][] = [];
+
+        // Initialize map with grass
         for (let y = 0; y < this.mapSize; y++) {
             map[y] = [];
             for (let x = 0; x < this.mapSize; x++) {
-                const rand = Math.random();
-                if (rand < 0.6) map[y][x] = TileType.GRASS;
-                else if (rand < 0.75) map[y][x] = TileType.FOREST;
-                else if (rand < 0.9) map[y][x] = TileType.HILLS;
-                else map[y][x] = TileType.WATER;
+                map[y][x] = TileType.GRASS;
             }
         }
+
+        // Helper function to count specific tile type
+        const countTileType = (type: TileType): number => {
+            let count = 0;
+            for (let y = 0; y < this.mapSize; y++) {
+                for (let x = 0; x < this.mapSize; x++) {
+                    if (map[y][x] === type) count++;
+                }
+            }
+            return count;
+        };
+
+        // Helper function to place connected tile groups
+        const placeConnectedTiles = (tileType: TileType, minGroupSize: number): boolean => {
+            const startX = Math.floor(Math.random() * this.mapSize);
+            const startY = Math.floor(Math.random() * this.mapSize);
+
+            if (map[startY][startX] !== TileType.GRASS) {
+                return false;
+            }
+
+            // Try to grow a group from this position
+            const group: Position[] = [{ x: startX, y: startY }];
+            const frontier: Position[] = [];
+
+            // Add initial neighbors
+            const directions = startX % 2 === 1
+                ? [[-1,0], [-1,1], [0,1], [0,-1], [1,0], [1,1]]
+                : [[-1,-1], [-1,0], [0,1], [0,-1], [1,-1], [1,0]];
+
+            for (const [dx, dy] of directions) {
+                const newX = startX + dx;
+                const newY = startY + dy;
+                if (newX >= 0 && newX < this.mapSize &&
+                    newY >= 0 && newY < this.mapSize &&
+                    map[newY][newX] === TileType.GRASS) {
+                    frontier.push({ x: newX, y: newY });
+                }
+            }
+
+            // Try to grow the group
+            while (group.length < minGroupSize && frontier.length > 0) {
+                const randomIndex = Math.floor(Math.random() * frontier.length);
+                const next = frontier.splice(randomIndex, 1)[0];
+
+                if (map[next.y][next.x] === TileType.GRASS) {
+                    group.push(next);
+
+                    // Add new neighbors to frontier
+                    for (const [dx, dy] of directions) {
+                        const newX = next.x + dx;
+                        const newY = next.y + dy;
+                        if (newX >= 0 && newX < this.mapSize &&
+                            newY >= 0 && newY < this.mapSize &&
+                            map[newY][newX] === TileType.GRASS &&
+                            !group.some(p => p.x === newX && p.y === newY) &&
+                            !frontier.some(p => p.x === newX && p.y === newY)) {
+                            frontier.push({ x: newX, y: newY });
+                        }
+                    }
+                }
+            }
+
+            if (group.length >= minGroupSize) {
+                group.forEach(pos => map[pos.y][pos.x] = tileType);
+                return true;
+            }
+
+            return false;
+        };
+
+        // Place water (20-40% of map)
+        const targetWaterPercentage = 20 + Math.random() * 20;
+        let attempts = 0;
+        while ((countTileType(TileType.WATER) / (this.mapSize * this.mapSize)) * 100 < targetWaterPercentage && attempts < 1000) {
+            if (!placeConnectedTiles(TileType.WATER, 3)) {
+                attempts++;
+            }
+        }
+
+        // Place hills (10-20% of map)
+        const targetHillsPercentage = 10 + Math.random() * 10;
+        attempts = 0;
+        while ((countTileType(TileType.HILLS) / (this.mapSize * this.mapSize)) * 100 < targetHillsPercentage && attempts < 1000) {
+            if (!placeConnectedTiles(TileType.HILLS, 3)) {
+                attempts++;
+            }
+        }
+
+        // Place forests (10-15% of map)
+        const targetForestPercentage = 10 + Math.random() * 5;
+        attempts = 0;
+        while ((countTileType(TileType.FOREST) / (this.mapSize * this.mapSize)) * 100 < targetForestPercentage && attempts < 1000) {
+            if (!placeConnectedTiles(TileType.FOREST, 2)) {
+                attempts++;
+            }
+        }
+
         return map;
     }
 
