@@ -1,4 +1,5 @@
 import { TileType, Position, Unit, GameState, UnitType, Tile } from '../../../shared/src/types';
+import { getStartingUnits, createUnit, resetUnitMovement } from './units';
 
 export class Game {
     private map: TileType[][];
@@ -33,29 +34,9 @@ export class Game {
     }
 
     private initializeUnitsForPlayer(playerId: string, playerIndex: number): Unit[] {
-        const units: Unit[] = [];
         const baseX = playerIndex === 0 ? 5 : this.mapSize - 5;
         const baseY = playerIndex === 0 ? 5 : this.mapSize - 5;
-
-        units.push({
-            id: `warrior-${playerId}`,
-            type: UnitType.WARRIOR,
-            position: { x: baseX, y: baseY },
-            playerId,
-            movementPoints: 2,
-            visionRange: 2
-        });
-
-        units.push({
-            id: `archer-${playerId}`,
-            type: UnitType.ARCHER,
-            position: { x: baseX, y: baseY + 1 },
-            playerId,
-            movementPoints: 2,
-            visionRange: 3
-        });
-
-        return units;
+        return getStartingUnits(playerId, { x: baseX, y: baseY });
     }
 
     private generateMap(): TileType[][] {
@@ -172,27 +153,9 @@ export class Game {
     private initializeUnits(): Unit[] {
         const units: Unit[] = [];
         this.players.forEach((playerId, index) => {
-            // Place units at opposite corners for now
             const baseX = index === 0 ? 6 : this.mapSize - 5;
             const baseY = index === 0 ? 5 : this.mapSize - 5;
-
-            units.push({
-                id: `warrior-${playerId}`,
-                type: UnitType.WARRIOR,
-                position: { x: baseX, y: baseY },
-                playerId,
-                movementPoints: 2,
-                visionRange: 2
-            });
-
-            units.push({
-                id: `archer-${playerId}`,
-                type: UnitType.ARCHER,
-                position: { x: baseX + 1, y: baseY },
-                playerId,
-                movementPoints: 2,
-                visionRange: 3
-            });
+            units.push(...getStartingUnits(playerId, { x: baseX, y: baseY }));
         });
         return units;
     }
@@ -239,7 +202,7 @@ export class Game {
         // Reset movement points for new player's units
         this.units
             .filter(unit => unit.playerId === this.players[this.currentPlayerIndex])
-            .forEach(unit => unit.movementPoints = 2);
+            .forEach(resetUnitMovement);
     }
 
     public moveUnit(unitId: string, destination: Position): boolean {

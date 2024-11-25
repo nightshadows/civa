@@ -102,29 +102,36 @@ export class GameScene extends Phaser.Scene {
         });
         this.debugText.setDepth(1000); // Ensure it's always on top
 
-        // Add keyboard controls
+        // Add keyboard controls for map panning
+        const moveView = (deltaX: number, deltaY: number) => {
+            const currentPos = this.view.getPosition();
+            this.view.setPosition(currentPos.x + deltaX, currentPos.y + deltaY);
+
+            const gameState = this.registry.get('gameState');
+            if (gameState) {
+                this.renderMap(gameState.visibleTiles, gameState.visibleUnits);
+            }
+        };
+
+        // Calculate movement distances
+        const hexWidth = this.hexSize * 2 * 0.75;
+        const hexHeight = this.hexSize * Math.sqrt(3);
+
+        // Setup keyboard controls
         this.input.keyboard.on('keydown-LEFT', () => {
-            const deltaX = -this.hexSize * 2 * 0.75; // Move left by one hex width
-            this.view.setPosition(this.view.getPosition().x + deltaX, this.view.getPosition().y);
-            this.renderMap(this.registry.get('gameState').visibleTiles, this.registry.get('gameState').visibleUnits);
+            moveView(hexWidth, 0);
         });
 
         this.input.keyboard.on('keydown-RIGHT', () => {
-            const deltaX = this.hexSize * 2 * 0.75; // Move right by one hex width
-            this.view.setPosition(this.view.getPosition().x + deltaX, this.view.getPosition().y);
-            this.renderMap(this.registry.get('gameState').visibleTiles, this.registry.get('gameState').visibleUnits);
+            moveView(-hexWidth, 0);
         });
 
         this.input.keyboard.on('keydown-UP', () => {
-            const deltaY = -this.hexSize * Math.sqrt(3); // Move up by one hex height
-            this.view.setPosition(this.view.getPosition().x, this.view.getPosition().y + deltaY);
-            this.renderMap(this.registry.get('gameState').visibleTiles, this.registry.get('gameState').visibleUnits);
+            moveView(0, hexHeight);
         });
 
         this.input.keyboard.on('keydown-DOWN', () => {
-            const deltaY = this.hexSize * Math.sqrt(3); // Move down by one hex height
-            this.view.setPosition(this.view.getPosition().x, this.view.getPosition().y + deltaY);
-            this.renderMap(this.registry.get('gameState').visibleTiles, this.registry.get('gameState').visibleUnits);
+            moveView(0, -hexHeight);
         });
     }
 
