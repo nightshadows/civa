@@ -133,6 +133,44 @@ export class GameScene extends Phaser.Scene {
         this.input.keyboard.on('keydown-DOWN', () => {
             moveView(0, -hexHeight);
         });
+
+        // Add Enter key handler
+        this.input.keyboard.on('keydown-ENTER', () => {
+            const gameState = this.registry.get('gameState');
+            if (!gameState || gameState.currentPlayerId !== this.playerId) return;
+
+            const myUnits = this.getVisibleUnits().filter(u => u.playerId === this.playerId);
+            const unitsWithMovement = myUnits.filter(u => u.movementPoints > 0);
+
+            if (unitsWithMovement.length === 0) {
+                // If no units have movement points, end turn
+                this.handleEndTurn();
+                return;
+            }
+
+            if (!this.selectedUnit) {
+                // If no unit selected, select first unit with movement
+                this.selectedUnit = unitsWithMovement[0];
+                this.highlightSelectedUnit(unitsWithMovement[0]);
+                this.showMovementRange(unitsWithMovement[0]);
+                return;
+            }
+
+            // Find index of current selected unit
+            const currentIndex = unitsWithMovement.findIndex(u => u.id === this.selectedUnit?.id);
+
+            if (currentIndex === -1 || currentIndex === unitsWithMovement.length - 1) {
+                // If current unit not found or is last unit, select first unit
+                this.selectedUnit = unitsWithMovement[0];
+                this.highlightSelectedUnit(unitsWithMovement[0]);
+                this.showMovementRange(unitsWithMovement[0]);
+            } else {
+                // Select next unit
+                this.selectedUnit = unitsWithMovement[currentIndex + 1];
+                this.highlightSelectedUnit(unitsWithMovement[currentIndex + 1]);
+                this.showMovementRange(unitsWithMovement[currentIndex + 1]);
+            }
+        });
     }
 
     private joinGame() {
