@@ -218,6 +218,7 @@ export class GameScene extends Phaser.Scene {
 
     public renderMap(tiles: { type: TileType; position: Position }[], units: Unit[] = []): void {
         this.mapContainer.removeAll(true);
+        this.clearHighlights();
 
         const tilesContainer = new Phaser.GameObjects.Container(this, 0, 0);
         const unitsContainer = new Phaser.GameObjects.Container(this, 0, 0);
@@ -240,10 +241,11 @@ export class GameScene extends Phaser.Scene {
         });
 
         if (this.selectedUnit) {
-            const stillExists = units.find(u => u.id === this.selectedUnit?.id);
-            if (stillExists) {
-                this.highlightSelectedUnit(this.selectedUnit);
-                this.showMovementRange(this.selectedUnit);
+            const updatedUnit = units.find(u => u.id === this.selectedUnit?.id);
+            if (updatedUnit) {
+                this.selectedUnit = updatedUnit;
+                this.highlightSelectedUnit(updatedUnit);
+                this.showMovementRange(updatedUnit);
             } else {
                 this.selectedUnit = null;
             }
@@ -395,7 +397,6 @@ export class GameScene extends Phaser.Scene {
                     }
                 }));
             }
-            this.clearSelection();
         } else {
             this.clearSelection();
         }
