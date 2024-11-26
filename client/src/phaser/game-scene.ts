@@ -2,10 +2,10 @@ import { TileType, Position, GameState, UnitType, Unit } from '@shared/types';
 import { HexGrid } from './hex-grid';
 import { UIPanel } from './ui-panel';
 import { View } from './view';
+import { GameEventEmitter } from '../events';
 
 export class GameScene extends Phaser.Scene {
     private hexSize: number;
-    private socket: WebSocket;
     private playerId?: string;
     private gameId: string;
     private selectedUnit: Unit | null = null;
@@ -16,6 +16,13 @@ export class GameScene extends Phaser.Scene {
     private mapContainer: Phaser.GameObjects.Container;
     private view: View;
     private debugText: Phaser.GameObjects.Text;
+    private gameActions: {
+        moveUnit: (unitId: string, destination: Position) => void;
+        fortifyUnit: (unitId: string) => void;
+        endTurn: () => void;
+    };
+    private gameEvents?: GameEventEmitter;
+    private boundHandleGameState?: (state: GameState) => void;
 
     constructor() {
         super({ key: 'GameScene' });
@@ -24,9 +31,19 @@ export class GameScene extends Phaser.Scene {
         this.gameId = 'test-game';
     }
 
-    init(data: { socket: WebSocket; playerId: string }) {
-        this.socket = data.socket;
+    init(data: { 
+        playerId: string;
+        gameActions: {
+            moveUnit: (unitId: string, destination: Position) => void;
+            fortifyUnit: (unitId: string) => void;
+            endTurn: () => void;
+        };
+        gameEvents: GameEventEmitter;
+        onReady: () => void;
+    }) {
         this.playerId = data.playerId;
+        this.gameActions = data.gameActions;
+        this.gameEvents = data.gameEvents;
 
         // Create view with viewport dimensions
         this.view = new View(
@@ -39,36 +56,26 @@ export class GameScene extends Phaser.Scene {
         this.uiPanel = new UIPanel(this);
         this.mapContainer = this.add.container(0, 0);
 
-        // Wait for assets to load before processing messages
-        this.load.once('complete', () => {
-            this.socket.addEventListener('message', (event) => {
-                const data = JSON.parse(event.data);
+        // Subscribe to game state updates with type safety
+        this.boundHandleGameState = this.handleGameState.bind(this);
+        this.gameEvents.on('updateGameState', this.boundHandleGameState);
 
-                switch (data.type) {
-                    case 'joined_game':
-                        console.log('Joined game with playerId:', data.playerId);
-                        this.playerId = data.playerId;
-                        localStorage.setItem('playerId', data.playerId);
-                        break;
-
-                    case 'game_state':
-                        console.log('Received game state:', data.state);
-                        this.handleGameState(data.state);
-                        break;
-
-                    case 'error':
-                        console.error('Game error:', data.message);
-                        break;
-                }
-            });
-
-            // Join game when scene starts
-            if (this.socket.readyState === WebSocket.OPEN) {
-                this.joinGame();
-            } else {
-                this.socket.addEventListener('open', () => this.joinGame());
-            }
+        // Optional: Handle other events
+        this.gameEvents.on('gameError', ({ message }) => {
+            console.error('Game error:', message);
+            // Handle error in UI
         });
+
+        // Wait for assets to load before initializing
+        this.load.once('complete', () => {
+            data.onReady();
+        });
+    }
+
+    shutdown() {
+        if (this.gameEvents && this.boundHandleGameState) {
+            this.gameEvents.off('updateGameState', this.boundHandleGameState);
+        }
     }
 
     create() {
@@ -170,14 +177,6 @@ export class GameScene extends Phaser.Scene {
                 this.showMovementRange(unitsWithMovement[currentIndex + 1]);
             }
         });
-    }
-
-    private joinGame() {
-        this.socket.send(JSON.stringify({
-            type: 'join_game',
-            gameId: this.gameId,
-            playerId: this.playerId
-        }));
     }
 
     private drawHex(x: number, y: number, tileType: TileType, position: Position): Phaser.GameObjects.Container {
@@ -423,16 +422,7 @@ export class GameScene extends Phaser.Scene {
             );
 
             if (canMoveTo) {
-                this.socket.send(JSON.stringify({
-                    type: 'action',
-                    action: {
-                        type: 'MOVE_UNIT',
-                        payload: {
-                            unitId: this.selectedUnit.id,
-                            destination: clickedHexPos
-                        }
-                    }
-                }));
+                this.gameActions.moveUnit(this.selectedUnit.id, clickedHexPos);
             }
         } else {
             this.clearSelection();
@@ -457,15 +447,7 @@ export class GameScene extends Phaser.Scene {
 
     private handleFortify() {
         if (this.selectedUnit && this.selectedUnit.movementPoints > 0) {
-            this.socket.send(JSON.stringify({
-                type: 'action',
-                action: {
-                    type: 'FORTIFY_UNIT',
-                    payload: {
-                        unitId: this.selectedUnit.id
-                    }
-                }
-            }));
+            this.gameActions.fortifyUnit(this.selectedUnit.id);
         }
     }
 
@@ -474,13 +456,7 @@ export class GameScene extends Phaser.Scene {
     }
 
     private handleEndTurn() {
-        this.socket.send(JSON.stringify({
-            type: 'action',
-            action: {
-                type: 'END_TURN',
-                payload: null
-            }
-        }));
+        this.gameActions.endTurn();
     }
 
     private handleGameState(state: GameState) {
