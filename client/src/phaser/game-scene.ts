@@ -87,7 +87,6 @@ export class GameScene extends Phaser.Scene {
             this.handleHexClick(pointer);
         });
 
-        this.uiPanel = new UIPanel(this);
 
         // Add event listeners for UI actions
         this.events.on('fortify_unit', this.handleFortify, this);
