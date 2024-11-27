@@ -7,7 +7,6 @@ import { GameEventEmitter } from '../events';
 export class GameScene extends Phaser.Scene {
     private hexSize: number;
     private playerId?: string;
-    private gameId: string;
     private selectedUnit: Unit | null = null;
     private highlightedHexes: Phaser.GameObjects.Graphics[] = [];
     private hexGrid: HexGrid;
@@ -28,7 +27,6 @@ export class GameScene extends Phaser.Scene {
         super({ key: 'GameScene' });
         this.hexSize = 32;
         this.hexGrid = new HexGrid(this.hexSize);
-        this.gameId = 'test-game';
     }
 
     init(data: { 

@@ -1,6 +1,7 @@
 import Phaser from 'phaser';
 import { GameScene } from './phaser/game-scene';
 import { GameEventEmitter } from './events';
+import { Position } from '@shared/types';
 
 // Get or create persistent playerId
 const getOrCreatePlayerId = (): string => {
@@ -15,6 +16,7 @@ const getOrCreatePlayerId = (): string => {
 const socket = new WebSocket('ws://localhost:3000');
 const playerId = getOrCreatePlayerId();
 const gameEvents = new GameEventEmitter();
+const gameId = 'test-game';
 
 socket.addEventListener('open', () => {
     console.log('Connected to server with playerId:', playerId);
@@ -46,6 +48,7 @@ socket.addEventListener('message', (event) => {
 // Game actions
 const gameActions = {
     moveUnit: (unitId: string, destination: Position) => {
+        console.info('Moving unit', unitId, 'to', destination);
         socket.send(JSON.stringify({
             type: 'action',
             action: {
@@ -56,6 +59,7 @@ const gameActions = {
     },
 
     fortifyUnit: (unitId: string) => {
+        console.info('Fortifying unit', unitId);
         socket.send(JSON.stringify({
             type: 'action',
             action: {
@@ -66,12 +70,22 @@ const gameActions = {
     },
 
     endTurn: () => {
+        console.info('Ending turn');
         socket.send(JSON.stringify({
             type: 'action',
             action: {
                 type: 'END_TURN',
                 payload: null
             }
+        }));
+    },
+
+    joinGame: (gameId: string) => {
+        console.info('Joining game', gameId);
+        socket.send(JSON.stringify({
+            type: 'join_game',
+            gameId,
+            playerId
         }));
     }
 };
@@ -92,20 +106,11 @@ game.scene.start('GameScene', {
     onReady: () => {
         // Join game when scene is ready
         if (socket.readyState === WebSocket.OPEN) {
-            socket.send(JSON.stringify({
-                type: 'join_game',
-                gameId: 'test-game',
-                playerId
-            }));
+            gameActions.joinGame(gameId)
         } else {
             socket.addEventListener('open', () => {
-                socket.send(JSON.stringify({
-                    type: 'join_game',
-                    gameId: 'test-game',
-                    playerId
-                }));
-            }
-            );
+                gameActions.joinGame(gameId);
+            });
         }
     }
 });
