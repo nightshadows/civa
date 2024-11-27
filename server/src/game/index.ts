@@ -290,32 +290,31 @@ export class Game {
         return null;
     }
 
-    public moveUnit(unitId: string, destination: Position): boolean {
+    public moveUnit(unitId: string, destination: Position): { success: boolean, error?: string } {
         const unit = this.units.find(u => u.id === unitId);
-        if (!unit) return false;
-        if (!this.isWithinMapBounds(destination)) return false;
-        if (!this.isPlayerTurn(unit.playerId)) return false;
-        if (unit.movementPoints <= 0) return false;
+        if (!unit) return { success: false, error: 'Unit not found' };
+        if (!this.isWithinMapBounds(destination)) return { success: false, error: 'Destination out of bounds' };
+        if (!this.isPlayerTurn(unit.playerId)) return { success: false, error: 'Not player turn' };
+        if (unit.movementPoints <= 0) return { success: false, error: 'Insufficient movement points' };
 
         // Check if destination terrain is passable
         const destTerrainCost = getMovementCost(this.map[destination.y][destination.x]);
-        if (destTerrainCost === null) return false;
+        if (destTerrainCost === null) return { success: false, error: 'Impassable terrain' };
 
-        // Find path considering terrain costs
-        const path = this.findPath(unit.position, destination, unit.movementPoints);
-        if (!path) return false;
+        // Check if destination is occupied
+        if (this.units.some(u => u.position.x === destination.x && u.position.y === destination.y)) {
+            return { success: false, error: 'Destination occupied' };
+        }
 
-        // Calculate total movement cost along the path
-        const totalCost = path.reduce((cost, pos) => {
-            const terrainCost = getMovementCost(this.map[pos.y][pos.x]);
-            return cost + (terrainCost || 0);
-        }, 0);
-
-        if (totalCost > unit.movementPoints) return false;
+        // Calculate movement cost for single tile movement
+        const movementCost = getMovementCost(this.map[destination.y][destination.x]) || 1;
+        
+        // Check if unit has enough movement points
+        if (unit.movementPoints < movementCost) return { success: false, error: 'Insufficient movement points' };
 
         unit.position = destination;
-        unit.movementPoints -= totalCost;
-        return true;
+        unit.movementPoints -= movementCost;
+        return { success: true };
     }
 
     private getHexDistance(a: Position, b: Position): number {
