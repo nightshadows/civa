@@ -19,6 +19,7 @@ export class BabylonGameScene {
     private gameEvents?: GameEventEmitter;
     private boundHandleGameState?: (state: GameState) => void;
     private currentGameState?: GameState;
+    private camera: ArcRotateCamera;
 
     constructor(private canvas: HTMLCanvasElement) {
         this.hexSize = 1; // Babylon uses different scale
@@ -28,9 +29,9 @@ export class BabylonGameScene {
         this.engine = new Engine(canvas, true);
         this.scene = new Scene(this.engine);
         
-        // Setup camera
-        const camera = new ArcRotateCamera("camera", 0, Math.PI / 3, 20, Vector3.Zero(), this.scene);
-        camera.attachControl(canvas, true);
+        // Store camera reference
+        this.camera = new ArcRotateCamera("camera", 0, Math.PI / 3, 20, Vector3.Zero(), this.scene);
+        this.camera.attachControl(canvas, true);
         
         // Add lighting
         const light = new HemisphericLight("light", new Vector3(0, 1, 0), this.scene);
@@ -360,23 +361,58 @@ export class BabylonGameScene {
             this.selectedUnitMesh.dispose();
         }
 
-        // Create a highlight mesh
-        const highlightMaterial = new StandardMaterial("selectedUnitMat", this.scene);
-        highlightMaterial.diffuseColor = new Color3(1, 1, 0); // Yellow highlight
-        highlightMaterial.alpha = 0.5;
-        highlightMaterial.emissiveColor = new Color3(0.5, 0.5, 0); // Slight glow effect
-
         const worldPos = this.hexGrid.hexToWorld(unit.position);
+        
+        // Center camera on unit position
+        const targetPosition = new Vector3(worldPos.x, 0, worldPos.y);
+        this.centerCameraOnPosition(targetPosition);
+
+        // Create highlight mesh (existing code)
+        const highlightMaterial = new StandardMaterial("selectedUnitMat", this.scene);
+        highlightMaterial.diffuseColor = new Color3(1, 1, 0);
+        highlightMaterial.alpha = 0.5;
+        highlightMaterial.emissiveColor = new Color3(0.5, 0.5, 0);
+
         this.selectedUnitMesh = MeshBuilder.CreateCylinder("selectedUnit", {
             height: 0.15,
-            diameter: this.hexSize * 1.5, // Slightly larger than the hex
+            diameter: this.hexSize * 1.5,
             tessellation: 6
         }, this.scene);
 
         this.selectedUnitMesh.material = highlightMaterial;
         this.selectedUnitMesh.position = new Vector3(worldPos.x, 0.05, worldPos.y);
 
-        // Update UI panel with unit info
         this.uiPanel.updateUnitInfo(unit);
+    }
+
+    private centerCameraOnPosition(position: Vector3, duration: number = 1000): void {
+        // Get current camera target
+        const startTarget = this.camera.target.clone();
+        const endTarget = position;
+        
+        // Animation frame
+        let startTime: number | null = null;
+        
+        const animate = (currentTime: number) => {
+            if (!startTime) startTime = currentTime;
+            const elapsed = currentTime - startTime;
+            const progress = Math.min(elapsed / duration, 1);
+            
+            // Smooth easing
+            const easeProgress = 1 - Math.pow(1 - progress, 3);
+            
+            // Interpolate position
+            const newX = startTarget.x + (endTarget.x - startTarget.x) * easeProgress;
+            const newY = startTarget.y + (endTarget.y - startTarget.y) * easeProgress;
+            const newZ = startTarget.z + (endTarget.z - startTarget.z) * easeProgress;
+            
+            this.camera.target = new Vector3(newX, newY, newZ);
+            
+            if (progress < 1) {
+                requestAnimationFrame(animate);
+            }
+        };
+        
+        requestAnimationFrame(animate);
     }
 } 
