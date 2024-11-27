@@ -232,7 +232,7 @@ export class BabylonGameScene {
                     this.showMovementRange(clickedUnit);
                 }
             }
-        } else if (this.selectedUnit.movementPoints > 0) {
+        } else if (this.selectedUnit && this.selectedUnit.movementPoints > 0) {
             // Try to move the selected unit
             const mapData = this.currentGameState.visibleTiles.reduce((acc: TileType[][], tile) => {
                 if (!acc[tile.position.y]) acc[tile.position.y] = [];
