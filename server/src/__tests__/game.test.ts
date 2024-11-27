@@ -14,7 +14,7 @@ describe('Game', () => {
             expect(game.canAddPlayer()).toBe(true);
             const state = game.getVisibleState(player1Id);
             expect(state.players).toHaveLength(1);
-            expect(state.players[0]).toBe(player2Id);
+            expect(state.players[0]).toBe(player1Id);
         });
 
         test('should allow adding a second player', () => {
