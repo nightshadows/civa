@@ -3,7 +3,7 @@ name: Server CI
 on:
   push:
     branches:
-      - main
+      - master
     paths:
       - 'server/**'
       - 'shared/**'
