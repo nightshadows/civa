@@ -1,14 +1,40 @@
 import Phaser from 'phaser';
 import { GameScene as PhaserGameScene } from './phaser/game-scene';
 import { BabylonGameScene } from './babylon/babylon-game-scene';
-import { GameEventEmitter } from './events';
-import { Position } from '@shared/types';
+import { GameState, Position } from '@shared/types';
 export interface GameActions {
     moveUnit: (unitId: string, destination: Position) => void;
     fortifyUnit: (unitId: string) => void;
     endTurn: () => void;
     joinGame: (gameId: string) => void;
 }
+
+export type GameEvents = {
+    'updateGameState': GameState;
+    'gameJoined': { playerId: string };
+    'gameError': { message: string };
+}
+
+export class GameEventEmitter {
+    private listeners: {
+        [K in keyof GameEvents]?: Set<(data: GameEvents[K]) => void>;
+    } = {};
+
+    on<K extends keyof GameEvents>(event: K, callback: (data: GameEvents[K]) => void) {
+        if (!this.listeners[event]) {
+            this.listeners[event] = new Set();
+        }
+        this.listeners[event]!.add(callback);
+    }
+
+    off<K extends keyof GameEvents>(event: K, callback: (data: GameEvents[K]) => void) {
+        this.listeners[event]?.delete(callback);
+    }
+
+    emit<K extends keyof GameEvents>(event: K, data: GameEvents[K]) {
+        this.listeners[event]?.forEach(callback => callback(data));
+    }
+} 
 
 export interface GameSetupConfig {
     playerId: string;
@@ -29,7 +55,7 @@ export class GameSetup {
         onReady: () => void,
         useBabylon: boolean = false) {
         if (useBabylon) {
-            const canvas = config.canvas || this.createCanvas(config.width, config.height);
+            const canvas = this.createCanvas(config.width, config.height);
             return this.setupBabylonGame(canvas, config, onReady);
         } else {
             return this.setupPhaserGame(config, onReady);

@@ -1,5 +1,4 @@
-import { GameSetup, GameActions } from './engine-setup';
-import { GameEventEmitter } from './events';
+import { GameSetup, GameActions, GameEventEmitter } from './engine-setup';
 
 // Check URL for 3D parameter
 const use3D = new URLSearchParams(window.location.search).has('3d');

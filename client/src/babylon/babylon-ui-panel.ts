@@ -119,7 +119,6 @@ export class BabylonUIPanel {
         this.fortifyButton.background = "#666666";
         this.fortifyButton.cornerRadius = 5;
         this.fortifyButton.thickness = 0;
-        this.fortifyButton.marginRight = "10px";
         
         const fortifyText = new TextBlock();
         fortifyText.text = "Fortify";
@@ -133,7 +132,6 @@ export class BabylonUIPanel {
         this.levelUpButton.background = "#666666";
         this.levelUpButton.cornerRadius = 5;
         this.levelUpButton.thickness = 0;
-        this.levelUpButton.marginRight = "10px";
         
         const levelUpText = new TextBlock();
         levelUpText.text = "Level Up";

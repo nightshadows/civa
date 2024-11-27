@@ -2,7 +2,7 @@ import { TileType, Position, GameState, UnitType, Unit } from '@shared/types';
 import { HexGrid } from './hex-grid';
 import { UIPanel } from './ui-panel';
 import { View } from './view';
-import { GameEventEmitter } from '../events';
+import { GameActions, GameEventEmitter } from 'src/engine-setup';
 
 export class GameScene extends Phaser.Scene {
     private hexSize: number;
@@ -15,11 +15,7 @@ export class GameScene extends Phaser.Scene {
     private mapContainer: Phaser.GameObjects.Container;
     private view: View;
     private debugText: Phaser.GameObjects.Text;
-    private gameActions: {
-        moveUnit: (unitId: string, destination: Position) => void;
-        fortifyUnit: (unitId: string) => void;
-        endTurn: () => void;
-    };
+    private gameActions: GameActions;
     private gameEvents?: GameEventEmitter;
     private boundHandleGameState?: (state: GameState) => void;
 
@@ -29,13 +25,9 @@ export class GameScene extends Phaser.Scene {
         this.hexGrid = new HexGrid(this.hexSize);
     }
 
-    init(data: { 
+    init(data: {
         playerId: string;
-        gameActions: {
-            moveUnit: (unitId: string, destination: Position) => void;
-            fortifyUnit: (unitId: string) => void;
-            endTurn: () => void;
-        };
+        gameActions: GameActions;
         gameEvents: GameEventEmitter;
         onReady: () => void;
     }) {
@@ -122,24 +114,24 @@ export class GameScene extends Phaser.Scene {
         const hexHeight = this.hexSize * Math.sqrt(3);
 
         // Setup keyboard controls
-        this.input.keyboard.on('keydown-LEFT', () => {
+        this.input?.keyboard?.on('keydown-LEFT', () => {
             moveView(hexWidth, 0);
         });
 
-        this.input.keyboard.on('keydown-RIGHT', () => {
+        this.input?.keyboard?.on('keydown-RIGHT', () => {
             moveView(-hexWidth, 0);
         });
 
-        this.input.keyboard.on('keydown-UP', () => {
+        this.input?.keyboard?.on('keydown-UP', () => {
             moveView(0, hexHeight);
         });
 
-        this.input.keyboard.on('keydown-DOWN', () => {
+        this.input?.keyboard?.on('keydown-DOWN', () => {
             moveView(0, -hexHeight);
         });
 
         // Add Enter key handler
-        this.input.keyboard.on('keydown-ENTER', () => {
+        this.input?.keyboard?.on('keydown-ENTER', () => {
             const gameState = this.registry.get('gameState');
             if (!gameState || gameState.currentPlayerId !== this.playerId) return;
 
@@ -225,7 +217,7 @@ export class GameScene extends Phaser.Scene {
         // Add health bar
         const healthBarWidth = 30;
         const healthBarHeight = 4;
-        const healthBarY = -sprite.height/2 - 8; // Changed from -10 to -8
+        const healthBarY = -sprite.height / 2 - 8; // Changed from -10 to -8
 
         // Health bar background (red)
         const healthBarBg = this.add.rectangle(
@@ -239,7 +231,7 @@ export class GameScene extends Phaser.Scene {
         // Health bar fill (green)
         const healthPercent = unit.currentHp / unit.maxHp;
         const healthBarFill = this.add.rectangle(
-            -healthBarWidth/2 + (healthBarWidth * healthPercent)/2,
+            -healthBarWidth / 2 + (healthBarWidth * healthPercent) / 2,
             healthBarY,
             healthBarWidth * healthPercent,
             healthBarHeight,
@@ -293,7 +285,7 @@ export class GameScene extends Phaser.Scene {
 
     private showMovementRange(unit: Unit): void {
         this.clearHighlights();
-        const gameState = this.registry.get('gameState');
+        const gameState = this.registry.get('gameState') as GameState;
         const mapData = gameState.visibleTiles.reduce((acc: TileType[][], tile) => {
             if (!acc[tile.position.y]) acc[tile.position.y] = [];
             acc[tile.position.y][tile.position.x] = tile.type;
@@ -303,7 +295,7 @@ export class GameScene extends Phaser.Scene {
         const movementHexes = this.hexGrid.getHexesInRange(
             unit.position,
             unit.movementPoints,
-            gameState.mapSize,
+            { width: gameState.mapSize, height: gameState.mapSize },
             mapData
         );
 
@@ -377,7 +369,7 @@ export class GameScene extends Phaser.Scene {
     private handleHexClick(pointer: Phaser.Input.Pointer): void {
         const clickedHexPos = this.view.screenToHex(pointer.x, pointer.y);
         const worldPos = this.view.screenToWorld(pointer.x, pointer.y);
-        const gameState = this.registry.get('gameState');
+        const gameState = this.registry.get('gameState') as GameState;
 
         // Create map data for movement calculation
         const mapData = gameState.visibleTiles.reduce((acc: TileType[][], tile) => {
@@ -411,7 +403,7 @@ export class GameScene extends Phaser.Scene {
             const movementHexes = this.hexGrid.getHexesInRange(
                 this.selectedUnit.position,
                 this.selectedUnit.movementPoints,
-                gameState.mapSize,
+                { width: gameState.mapSize, height: gameState.mapSize },
                 mapData
             );
 
