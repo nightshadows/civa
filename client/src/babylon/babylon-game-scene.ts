@@ -25,6 +25,7 @@ export class BabylonGameScene {
     private hexMeshFactory: BabylonHexMeshFactory;
     private tileMeshes: Map<string, TransformNode> = new Map();
     private unitMeshes: Map<string, TransformNode> = new Map();
+    private hasInitialCameraPosition: boolean = false;
 
     constructor(private canvas: HTMLCanvasElement) {
         this.hexSize = 1; // Babylon uses different scale
@@ -34,8 +35,22 @@ export class BabylonGameScene {
         this.engine = new Engine(canvas, true);
         this.scene = new Scene(this.engine);
 
-        // Store camera reference
-        this.camera = new ArcRotateCamera("camera", 0, Math.PI / 3, 20, Vector3.Zero(), this.scene);
+        // Update camera initialization
+        this.camera = new ArcRotateCamera(
+            "camera",
+            Math.PI / 4, // alpha - initial rotation
+            Math.PI / 3, // beta - initial tilt
+            20,         // radius - will be adjusted based on map size
+            Vector3.Zero(),
+            this.scene
+        );
+        
+        // Set camera limits
+        this.camera.lowerRadiusLimit = 5;
+        this.camera.upperRadiusLimit = 100;
+        this.camera.lowerBetaLimit = 0.1;
+        this.camera.upperBetaLimit = Math.PI / 2;
+        
         this.camera.attachControl(canvas, true);
 
         // Add lighting
@@ -65,6 +80,7 @@ export class BabylonGameScene {
         this.playerId = data.playerId;
         this.gameActions = data.gameActions;
         this.gameEvents = data.gameEvents;
+        this.hasInitialCameraPosition = false;
 
         // Create UI Panel
         this.uiPanel = new BabylonUIPanel(this.scene);
@@ -113,6 +129,7 @@ export class BabylonGameScene {
         this.unitMeshes.clear();
 
         this.engine.dispose();
+        this.hasInitialCameraPosition = false;
     }
 
     public renderMap(tiles: { type: TileType; position: Position }[], units: Unit[] = []): void {
@@ -173,6 +190,12 @@ export class BabylonGameScene {
                 mesh.setEnabled(false);
             }
         });
+
+        // After rendering all tiles and units, center the camera if this is the first render
+        if (!this.hasInitialCameraPosition) {
+            this.centerCameraOnVisibleTiles(tiles);
+            this.hasInitialCameraPosition = true;
+        }
     }
 
     private setupInputHandling() {
@@ -398,5 +421,38 @@ export class BabylonGameScene {
         };
 
         requestAnimationFrame(animate);
+    }
+
+    private centerCameraOnVisibleTiles(tiles: { position: Position }[]): void {
+        if (tiles.length === 0) return;
+
+        // Calculate bounds of visible tiles
+        let minX = Infinity;
+        let maxX = -Infinity;
+        let minY = Infinity;
+        let maxY = -Infinity;
+
+        tiles.forEach(tile => {
+            const worldPos = this.view.hexToWorld(tile.position);
+            minX = Math.min(minX, worldPos.x);
+            maxX = Math.max(maxX, worldPos.x);
+            minY = Math.min(minY, worldPos.y);
+            maxY = Math.max(maxY, worldPos.y);
+        });
+
+        // Calculate center point
+        const centerX = (minX + maxX) / 2;
+        const centerY = (minY + maxY) / 2;
+
+        // Calculate required camera distance based on map size
+        const mapWidth = maxX - minX;
+        const mapHeight = maxY - minY;
+        const requiredDistance = Math.max(mapWidth, mapHeight) * 1.2; // 1.2 for some padding
+
+        // Update camera position
+        this.camera.target = new Vector3(centerX, 0, centerY);
+        this.camera.radius = requiredDistance;
+        this.camera.alpha = Math.PI / 4; // 45 degrees
+        this.camera.beta = Math.PI / 3;  // 60 degrees
     }
 } 
