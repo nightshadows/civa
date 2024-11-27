@@ -12,12 +12,12 @@ export class Game {
     private _gameId: string;
     private turnNumber: number = 1;
 
-    constructor(mapSize: number, players: string[], gameId: string) {
+    constructor(mapSize: number, players: string[], gameId: string, fixedMap?: TileType[][]) {
         this.mapSize = mapSize;
         this.players = players;
         this._gameId = gameId;
         this.currentPlayerIndex = 0;
-        this.map = this.generateMap();
+        this.map = fixedMap || this.generateMap();
         this.units = [];
 
         // Initialize units for initial players
@@ -349,7 +349,7 @@ export class Game {
         return this._gameId;
     }
 
-    private getNeighbors(hex: Position): Position[] {
+    public getNeighbors(hex: Position): Position[] {
         const directions = hex.x % 2 === 1
             ? [
                 { x: -1, y: 0 },  // top left
