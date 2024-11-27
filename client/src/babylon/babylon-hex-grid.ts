@@ -5,37 +5,30 @@ export class BabylonHexGrid {
     constructor(private hexSize: number) {}
 
     hexToWorld(hex: Position): Vector2 {
-        // Convert axial coordinates to world (pixel) coordinates
-        const x = this.hexSize * (3/2 * hex.x);
-        const y = this.hexSize * (Math.sqrt(3) * (hex.y + hex.x/2));
+        // Using offset coordinates with odd column offset
+        const x = this.hexSize * -2 * (hex.x * 0.75);
+        
+        // Add vertical offset for odd columns
+        const oddColumnOffset = Math.abs(hex.x) % 2 === 1 ? this.hexSize * Math.sqrt(3) * 0.5 : 0;
+        const y = this.hexSize * (hex.y * Math.sqrt(3)) + oddColumnOffset;
         
         return new Vector2(x, y);
     }
 
     worldToHex(x: number, y: number): Position {
-        // Convert world (pixel) coordinates to axial coordinates
-        const q = (2/3 * x) / this.hexSize;
-        const r = (-1/3 * x + Math.sqrt(3)/3 * y) / this.hexSize;
+        // Inverse conversion
+        const q = (-x / (this.hexSize * 1.5));
+        const column = Math.round(q);
+        const oddColumnOffset = Math.abs(column) % 2 === 1 ? this.hexSize * Math.sqrt(3) * 0.5 : 0;
+        const r = ((y - oddColumnOffset) / (this.hexSize * Math.sqrt(3)));
         
         return this.roundHex({ x: q, y: r });
     }
 
     private roundHex(hex: { x: number, y: number }): Position {
-        // Convert floating point hex coordinates to integer coordinates
         let q = Math.round(hex.x);
         let r = Math.round(hex.y);
-        const s = Math.round(-hex.x - hex.y);
-
-        const q_diff = Math.abs(q - hex.x);
-        const r_diff = Math.abs(r - hex.y);
-        const s_diff = Math.abs(s - (-hex.x - hex.y));
-
-        if (q_diff > r_diff && q_diff > s_diff) {
-            q = -r - s;
-        } else if (r_diff > s_diff) {
-            r = -q - s;
-        }
-
+        
         return { x: q, y: r };
     }
 

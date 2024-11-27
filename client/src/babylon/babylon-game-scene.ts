@@ -1,4 +1,4 @@
-import { Engine, Scene, ArcRotateCamera, Vector3, HemisphericLight, MeshBuilder, StandardMaterial, Color3, TransformNode, Vector2 } from '@babylonjs/core';
+import { Engine, Scene, ArcRotateCamera, Vector3, HemisphericLight, Material, MeshBuilder, StandardMaterial, Color3, TransformNode, Vector2, DynamicTexture, Mesh } from '@babylonjs/core';
 import { TileType, Position, GameState, UnitType, Unit } from '@shared/types';
 import { BabylonHexGrid } from './babylon-hex-grid';
 import { BabylonUIPanel } from './babylon-ui-panel';
@@ -83,7 +83,10 @@ export class BabylonGameScene {
         this.engine.dispose();
     }
 
-    private createHexMesh(type: TileType): TransformNode {
+    private createHexMesh(type: TileType, position: Position): TransformNode {
+        const container = new TransformNode("hexContainer", this.scene);
+        
+        // Create hex mesh
         const hexMaterial = new StandardMaterial("hexMat", this.scene);
         
         // Set material color based on tile type
@@ -109,8 +112,53 @@ export class BabylonGameScene {
         }, this.scene);
         
         hex.material = hexMaterial;
+        hex.parent = container;
+
+        // Create text plane
+        const textPlane = MeshBuilder.CreatePlane("textPlane", {
+            width: 2,
+            height: 1,
+        }, this.scene);
+        textPlane.parent = container;
+        textPlane.position.y = 0.1;
+        textPlane.rotation.x = Math.PI / 2;
+
+        // Create texture with transparency
+        const textTexture = new DynamicTexture(
+            `textTexture_${position.x}_${position.y}`, 
+            { width: 1024, height: 512 },
+            this.scene,
+            true
+        );
         
-        return hex;
+        const textMaterial = new StandardMaterial(`textMaterial_${position.x}_${position.y}`, this.scene);
+        textMaterial.diffuseTexture = textTexture;
+        textMaterial.specularColor = new Color3(0, 0, 0);
+        textMaterial.backFaceCulling = false;
+        textMaterial.emissiveColor = new Color3(1, 1, 1);
+        
+        // Enable transparency
+        textMaterial.useAlphaFromDiffuseTexture = true;
+        textMaterial.diffuseTexture.hasAlpha = true;
+        textMaterial.transparencyMode = Material.MATERIAL_ALPHABLEND;
+        
+        textPlane.material = textMaterial;
+
+        // Draw text on transparent background
+        const ctx = textTexture.getContext();
+        ctx.clearRect(0, 0, 1024, 512); // Clear with transparency
+        ctx.fillStyle = "black";
+        ctx.font = "bold 240px Arial";
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+        ctx.fillText(`${position.x},${position.y}`, 512, 256);
+        textTexture.update();
+
+        // Adjust plane scaling
+        textPlane.scaling.x = 1;
+        textPlane.scaling.y = 1;
+
+        return container;
     }
 
     private createUnitMesh(unit: Unit): TransformNode {
@@ -139,9 +187,9 @@ export class BabylonGameScene {
 
         // Create tiles
         tiles.forEach(tile => {
-            const hexMesh = this.createHexMesh(tile.type);
+            const hexContainer = this.createHexMesh(tile.type, tile.position);
             const worldPos = this.hexGrid.hexToWorld(tile.position);
-            hexMesh.position = new Vector3(worldPos.x, 0, worldPos.y);
+            hexContainer.position = new Vector3(worldPos.x, 0, worldPos.y);
         });
 
         // Create units

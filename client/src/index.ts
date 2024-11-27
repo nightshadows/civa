@@ -1,6 +1,9 @@
 import { GameSetup, GameActions } from './engine-setup';
 import { GameEventEmitter } from './events';
 
+// Check URL for 3D parameter
+const use3D = new URLSearchParams(window.location.search).has('3d');
+
 // Get or create persistent playerId
 const getOrCreatePlayerId = (): string => {
     const storedId = localStorage.getItem('playerId');
@@ -89,12 +92,12 @@ const gameActions: GameActions = {
     }
 };
 
-// Create game with chosen engine
+// Create game with engine choice based on URL parameter
 const game = GameSetup.createGame({
     playerId,
     gameId,
     gameActions,
-    gameEvents,  // Pass the event emitter
+    gameEvents,
     width: 800,
     height: 700,
     backgroundColor: '#1099bb',
@@ -109,15 +112,5 @@ const game = GameSetup.createGame({
             });
         }
     },
-    true); // Set to true to use Babylon.js
+    use3D); // Set to true to use Babylon.js
 
-// Setup WebSocket message handling
-socket.onmessage = (event) => {
-    const data = JSON.parse(event.data);
-
-    if (data.type === 'gameState') {
-        gameEvents.emit('updateGameState', data.state);
-    } else if (data.type === 'error') {
-        gameEvents.emit('gameError', { message: data.message });
-    }
-};
