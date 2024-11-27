@@ -37,6 +37,14 @@ jobs:
         cache: 'npm'
         cache-dependency-path: '**/package-lock.json'
 
+    - name: Install shared dependencies
+      working-directory: ./shared
+      run: npm ci
+
+    - name: Build shared package
+      working-directory: ./shared
+      run: npm run build
+
     - name: Install server dependencies
       working-directory: ./server
       run: npm ci
