@@ -1,7 +1,5 @@
-import Phaser from 'phaser';
-import { GameScene } from './phaser/game-scene';
+import { GameSetup, GameActions } from './engine-setup';
 import { GameEventEmitter } from './events';
-import { Position } from '@shared/types';
 
 // Get or create persistent playerId
 const getOrCreatePlayerId = (): string => {
@@ -43,11 +41,12 @@ socket.addEventListener('message', (event) => {
             gameEvents.emit('gameError', { message: data.message });
             break;
     }
-});
+});// Create the event emitter
 
 // Game actions
-const gameActions = {
-    moveUnit: (unitId: string, destination: Position) => {
+const gameActions: GameActions = {
+    moveUnit: (unitId, destination) => {
+
         console.info('Moving unit', unitId, 'to', destination);
         socket.send(JSON.stringify({
             type: 'action',
@@ -58,7 +57,7 @@ const gameActions = {
         }));
     },
 
-    fortifyUnit: (unitId: string) => {
+    fortifyUnit: (unitId) => {
         console.info('Fortifying unit', unitId);
         socket.send(JSON.stringify({
             type: 'action',
@@ -80,7 +79,7 @@ const gameActions = {
         }));
     },
 
-    joinGame: (gameId: string) => {
+    joinGame: (gameId) => {
         console.info('Joining game', gameId);
         socket.send(JSON.stringify({
             type: 'join_game',
@@ -90,20 +89,17 @@ const gameActions = {
     }
 };
 
-const config = {
-    type: Phaser.AUTO,
+// Create game with chosen engine
+const game = GameSetup.createGame({
+    playerId,
+    gameId,
+    gameActions,
+    gameEvents,  // Pass the event emitter
     width: 800,
     height: 700,
     backgroundColor: '#1099bb',
-    scene: GameScene
-};
-
-const game = new Phaser.Game(config);
-game.scene.start('GameScene', {
-    playerId,
-    gameActions,
-    gameEvents,
-    onReady: () => {
+},
+    () => {
         // Join game when scene is ready
         if (socket.readyState === WebSocket.OPEN) {
             gameActions.joinGame(gameId)
@@ -112,5 +108,16 @@ game.scene.start('GameScene', {
                 gameActions.joinGame(gameId);
             });
         }
+    },
+    true); // Set to true to use Babylon.js
+
+// Setup WebSocket message handling
+socket.onmessage = (event) => {
+    const data = JSON.parse(event.data);
+
+    if (data.type === 'gameState') {
+        gameEvents.emit('updateGameState', data.state);
+    } else if (data.type === 'error') {
+        gameEvents.emit('gameError', { message: data.message });
     }
-});
+};
