@@ -80,6 +80,7 @@ describe('Game', () => {
             const validMove = findValidMove(game, unit);
             expect(validMove).toBeDefined();
 
+            if (!validMove) return;
             const moveResult = game.moveUnit(unit.id, validMove);
             expect(moveResult.success).toBe(true);
 
