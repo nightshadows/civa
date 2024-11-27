@@ -1,32 +1,46 @@
-name: CI
+name: Server CI
 
 on:
   push:
     branches:
       - main
+    paths:
+      - 'server/**'
+      - 'shared/**'
+      - '.github/workflows/**'
   pull_request:
     branches:
       - main
+    paths:
+      - 'server/**'
+      - 'shared/**'
+      - '.github/workflows/**'
 
 jobs:
-  build:
+  test:
     runs-on: ubuntu-latest
+
+    defaults:
+      run:
+        working-directory: ./server
 
     strategy:
       matrix:
-        node-version: [16.x, 18.x] # Specify the Node.js versions you want to test against
+        node-version: [18.x]
 
     steps:
     - name: Checkout repository
       uses: actions/checkout@v3
 
-    - name: Set up Node.js
+    - name: Set up Node.js ${{ matrix.node-version }}
       uses: actions/setup-node@v3
       with:
         node-version: ${{ matrix.node-version }}
+        cache: 'npm'
+        cache-dependency-path: './server/package-lock.json'
 
     - name: Install dependencies
-      run: npm install
+      run: npm ci
 
-    - name: Run tests
+    - name: Run server tests
       run: npm test 
