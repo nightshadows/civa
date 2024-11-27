@@ -12,10 +12,14 @@ export class BabylonUIPanel {
     private endTurnButton: Rectangle;
     private playerList: TextBlock;
     private mainPanel: StackPanel;
+    private onEndTurn?: () => void;
+    private onFortifyUnit?: () => void;
+    private onLevelUpUnit?: () => void;
 
     constructor(scene: Scene) {
         this.advancedTexture = AdvancedDynamicTexture.CreateFullscreenUI("UI", true, scene);
         this.createPanel();
+        this.setupButtonHandlers();
     }
 
     private createPanel() {
@@ -82,21 +86,40 @@ export class BabylonUIPanel {
         this.playerList.paddingLeft = "200px";
         this.mainPanel.addControl(this.playerList);
 
+        // Create and add buttons
         this.createButtons();
     }
 
     private createButtons() {
         const buttonContainer = new StackPanel();
-        buttonContainer.horizontalAlignment = Control.HORIZONTAL_ALIGNMENT_CENTER;
+        buttonContainer.horizontalAlignment = Control.HORIZONTAL_ALIGNMENT_RIGHT;
+        buttonContainer.verticalAlignment = Control.VERTICAL_ALIGNMENT_BOTTOM;
         buttonContainer.isVertical = false;
         buttonContainer.height = "40px";
+        buttonContainer.paddingRight = "20px";
+        buttonContainer.paddingBottom = "10px";
 
+        // Create End Turn button
+        this.endTurnButton = new Rectangle("endTurnBtn");
+        this.endTurnButton.width = "100px";
+        this.endTurnButton.height = "30px";
+        this.endTurnButton.background = "#666666";
+        this.endTurnButton.cornerRadius = 5;
+        this.endTurnButton.thickness = 0;
+        
+        const endTurnText = new TextBlock();
+        endTurnText.text = "End Turn";
+        endTurnText.color = "white";
+        this.endTurnButton.addControl(endTurnText);
+        
         // Create Fortify button
         this.fortifyButton = new Rectangle("fortifyBtn");
         this.fortifyButton.width = "100px";
         this.fortifyButton.height = "30px";
         this.fortifyButton.background = "#666666";
         this.fortifyButton.cornerRadius = 5;
+        this.fortifyButton.thickness = 0;
+        this.fortifyButton.marginRight = "10px";
         
         const fortifyText = new TextBlock();
         fortifyText.text = "Fortify";
@@ -109,7 +132,7 @@ export class BabylonUIPanel {
         this.levelUpButton.height = "30px";
         this.levelUpButton.background = "#666666";
         this.levelUpButton.cornerRadius = 5;
-        this.levelUpButton.marginLeft = "10px";
+        this.levelUpButton.thickness = 0;
         this.levelUpButton.marginRight = "10px";
         
         const levelUpText = new TextBlock();
@@ -117,23 +140,42 @@ export class BabylonUIPanel {
         levelUpText.color = "white";
         this.levelUpButton.addControl(levelUpText);
         
-        // Create End Turn button
-        this.endTurnButton = new Rectangle("endTurnBtn");
-        this.endTurnButton.width = "100px";
-        this.endTurnButton.height = "30px";
-        this.endTurnButton.background = "#666666";
-        this.endTurnButton.cornerRadius = 5;
-        
-        const endTurnText = new TextBlock();
-        endTurnText.text = "End Turn";
-        endTurnText.color = "white";
-        this.endTurnButton.addControl(endTurnText);
-        
+        // Add buttons from left to right
         buttonContainer.addControl(this.fortifyButton);
         buttonContainer.addControl(this.levelUpButton);
         buttonContainer.addControl(this.endTurnButton);
         
-        this.mainPanel.addControl(buttonContainer);
+        this.advancedTexture.addControl(buttonContainer);
+    }
+
+    private setupButtonHandlers() {
+        this.endTurnButton.onPointerClickObservable.add(() => {
+            if (this.onEndTurn) {
+                this.onEndTurn();
+            }
+        });
+
+        this.fortifyButton.onPointerClickObservable.add(() => {
+            if (this.onFortifyUnit) {
+                this.onFortifyUnit();
+            }
+        });
+
+        this.levelUpButton.onPointerClickObservable.add(() => {
+            if (this.onLevelUpUnit) {
+                this.onLevelUpUnit();
+            }
+        });
+    }
+
+    public setCallbacks(callbacks: {
+        onEndTurn: () => void;
+        onFortifyUnit: () => void;
+        onLevelUpUnit: () => void;
+    }) {
+        this.onEndTurn = callbacks.onEndTurn;
+        this.onFortifyUnit = callbacks.onFortifyUnit;
+        this.onLevelUpUnit = callbacks.onLevelUpUnit;
     }
 
     public updateUnitInfo(unit: Unit | null) {

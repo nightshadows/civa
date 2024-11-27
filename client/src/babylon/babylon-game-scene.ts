@@ -57,6 +57,20 @@ export class BabylonGameScene {
         
         // Create UI Panel
         this.uiPanel = new BabylonUIPanel(this.scene);
+        this.uiPanel.setCallbacks({
+            onEndTurn: () => {
+                this.gameActions.endTurn();
+            },
+            onFortifyUnit: () => {
+                if (this.selectedUnit) {
+                    this.gameActions.fortifyUnit(this.selectedUnit.id);
+                }
+            },
+            onLevelUpUnit: () => {
+                // Implement level up logic when needed
+                console.log('Level up not implemented yet');
+            }
+        });
         
         // Subscribe to game state updates
         this.boundHandleGameState = this.handleGameState.bind(this);
