@@ -4,7 +4,6 @@
   "scripts": {
     "prebuild": "cd ../shared && npm run build",
     "dev": "parcel src/index.html",
-    "dev3d": "parcel src/index3d.html",
     "build": "parcel build src/index.html --dist-dir public",
     "clean": "rm -rf .parcel-cache public"
   },
