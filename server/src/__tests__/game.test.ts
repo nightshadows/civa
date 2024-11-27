@@ -16,6 +16,7 @@ describe('Game', () => {
             expect(state.players).toHaveLength(1);
             expect(state.players[0]).toBe(player1Id);
         });
+        // just a test
 
         test('should allow adding a second player', () => {
             const game = new Game(mapSize, [player1Id], 'test-game');
