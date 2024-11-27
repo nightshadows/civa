@@ -1,6 +1,6 @@
 import { describe, test, expect, beforeEach } from 'vitest';
 import { Game } from '../game';
-import { GameState, Position, TileType, Unit, UnitType } from '../../../shared/src/types';
+import { GameState, Position, Unit } from '../../../shared/src/types';
 import { getMovementCost } from '../../../shared/src/terrain';
 
 describe('Game', () => {
@@ -59,10 +59,8 @@ describe('Game', () => {
             if (!unit) return;
 
             const initialPoints = unit.movementPoints;
-            const validMove = findValidMove(state, unit);
+            const validMove = findValidMove(game, unit);
             expect(validMove).toBeDefined();
-
-            if (!validMove) return;
 
             const moveResult = game.moveUnit(unit.id, validMove);
             expect(moveResult.success).toBe(true);
@@ -94,7 +92,7 @@ describe('Game', () => {
 
             if (!unit) return;
 
-            const validMove = findValidMove(state, unit);
+            const validMove = findValidMove(game, unit);
             expect(validMove).toBeDefined();
 
             if (!validMove) return;
@@ -106,23 +104,37 @@ describe('Game', () => {
                 .visibleUnits.find(u => u.id === unit.id);
             expect(movedUnit?.position).toEqual(validMove);
         });
+
+        test('should not allow unit movement onto impassable terrain', () => {
+            const state = game.getVisibleState(player1Id);
+            const unit = state.visibleUnits.find(u => u.playerId === player1Id);
+            expect(unit).toBeDefined();
+
+            if (!unit) return;
+
+            // Find an impassable tile adjacent to the unit
+            const impassableTile = game.getNeighbors(unit.position).find(pos => {
+                const isImpassable = getMovementCost(game.map[pos.y][pos.x]) === null;
+                return isImpassable;
+            });
+
+            expect(impassableTile).toBeDefined();
+
+            if (!impassableTile) return;
+
+            // Attempt to move the unit onto the impassable tile
+            const moveResult = game.moveUnit(unit.id, impassableTile);
+            expect(moveResult.success).toBe(false);
+            expect(moveResult.error).toBe('Impassable terrain');
+        });
     });
 });
 
 // Helper function to find a valid move for a unit
-function findValidMove(state: GameState, unit: Unit): Position | undefined {
-    return state.visibleTiles.find(tile => {
-        const isAdjacent = Math.abs(tile.position.x - unit.position.x) <= 1 &&
-            Math.abs(tile.position.y - unit.position.y) <= 1 &&
-            !(tile.position.x === unit.position.x && tile.position.y === unit.position.y);
-
-        const isPassable = getMovementCost(tile.type) !== null;
-
-        const isOccupied = state.visibleUnits.some(u => 
-            u.position.x === tile.position.x && 
-            u.position.y === tile.position.y
-        );
-
-        return isAdjacent && isPassable && !isOccupied;
-    })?.position;
+function findValidMove(game: Game, unit: Unit): Position | undefined {
+    return game.getHexesInRange(unit.position, 1).find(pos => {
+        const isPassable = getMovementCost(game.map[pos.y][pos.x]) !== null;
+        const isOccupied = game.units.some(u => u.position.x === pos.x && u.position.y === pos.y);
+        return isPassable && !isOccupied;
+    });
 } 

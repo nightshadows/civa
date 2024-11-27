@@ -3,8 +3,8 @@ import { getStartingUnits, createUnit, resetUnitMovement } from './units';
 import { getMovementCost } from '../../../shared/src/terrain';
 
 export class Game {
-    private map: TileType[][];
-    private units: Unit[];
+    public map: TileType[][];
+    public units: Unit[];
     private players: string[];
     private currentPlayerIndex: number;
     private mapSize: number;
@@ -374,7 +374,7 @@ export class Game {
         }));
     }
 
-    private getHexesInRange(center: Position, movementPoints: number): Position[] {
+    public getHexesInRange(center: Position, movementPoints: number): Position[] {
         const visited = new Set<string>();
         const result: Position[] = [];
         const posToKey = (pos: Position) => `${pos.x},${pos.y}`;
