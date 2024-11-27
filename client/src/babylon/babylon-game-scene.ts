@@ -178,11 +178,15 @@ export class BabylonGameScene {
     }
 
     public renderMap(tiles: { type: TileType; position: Position }[], units: Unit[] = []): void {
-        // Clear existing meshes
-        this.scene.meshes.forEach(mesh => {
+        // Clear existing meshes and TransformNodes
+        this.scene.meshes.slice().forEach(mesh => {
             if (mesh.name !== "camera") {
                 mesh.dispose();
             }
+        });
+        
+        this.scene.transformNodes.slice().forEach(node => {
+            node.dispose();
         });
 
         // Create tiles
@@ -202,7 +206,10 @@ export class BabylonGameScene {
 
     private setupInputHandling() {
         this.scene.onPointerDown = (evt) => {
-            const pickResult = this.scene.pick(evt.x, evt.y);
+            const pickResult = this.scene.pick(
+                this.scene.pointerX,
+                this.scene.pointerY
+            );
             if (pickResult.hit) {
                 // Convert 3D position to 2D world position
                 const worldPos = new Vector2(
@@ -270,6 +277,7 @@ export class BabylonGameScene {
     }
 
     private showMovementRange(unit: Unit) {
+        console.info('Showing movement range for unit', unit);
         if (!this.currentGameState) return;
 
         this.clearHighlights();
@@ -286,6 +294,8 @@ export class BabylonGameScene {
             this.currentGameState.mapSize,
             mapData
         );
+        console.info('Showing movementHexes', movementHexes);
+
 
         const highlightHexes = movementHexes.filter(hex =>
             !(hex.x === unit.position.x && hex.y === unit.position.y)
@@ -328,5 +338,31 @@ export class BabylonGameScene {
             this.selectedUnitMesh = null;
         }
         this.uiPanel.updateUnitInfo(null);
+    }
+
+    private highlightSelectedUnit(unit: Unit): void {
+        // Clear any existing selection highlight
+        if (this.selectedUnitMesh) {
+            this.selectedUnitMesh.dispose();
+        }
+
+        // Create a highlight mesh
+        const highlightMaterial = new StandardMaterial("selectedUnitMat", this.scene);
+        highlightMaterial.diffuseColor = new Color3(1, 1, 0); // Yellow highlight
+        highlightMaterial.alpha = 0.5;
+        highlightMaterial.emissiveColor = new Color3(0.5, 0.5, 0); // Slight glow effect
+
+        const worldPos = this.hexGrid.hexToWorld(unit.position);
+        this.selectedUnitMesh = MeshBuilder.CreateCylinder("selectedUnit", {
+            height: 0.15,
+            diameter: this.hexSize * 1.5, // Slightly larger than the hex
+            tessellation: 6
+        }, this.scene);
+
+        this.selectedUnitMesh.material = highlightMaterial;
+        this.selectedUnitMesh.position = new Vector3(worldPos.x, 0.05, worldPos.y);
+
+        // Update UI panel with unit info
+        this.uiPanel.updateUnitInfo(unit);
     }
 } 
