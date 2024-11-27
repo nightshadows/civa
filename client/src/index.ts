@@ -10,10 +10,20 @@ const getOrCreatePlayerId = (): string => {
         console.log('Using stored playerId:', storedId);
         return storedId;
     }
-    return '';  // Return empty string, server will assign new ID if needed
+    // Generate UUID v4
+    const newId = 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function (c) {
+        const r = Math.random() * 16 | 0;
+        const v = c === 'x' ? r : (r & 0x3 | 0x8);
+        return v.toString(16);
+    });
+    localStorage.setItem('playerId', newId);
+    return newId;
 };
 
-const socket = new WebSocket('ws://localhost:3000');
+const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+const wsUrl = `${wsProtocol}//${window.location.hostname}:3000`;
+console.log('Connecting to', wsUrl);
+const socket = new WebSocket(wsUrl);
 const playerId = getOrCreatePlayerId();
 const gameEvents = new GameEventEmitter();
 const gameId = 'test-game';
@@ -29,7 +39,6 @@ socket.addEventListener('message', (event) => {
     switch (data.type) {
         case 'joined_game':
             console.log('Joined game with playerId:', data.playerId);
-            localStorage.setItem('playerId', data.playerId);
             gameEvents.emit('gameJoined', { playerId: data.playerId });
             break;
 
