@@ -3,6 +3,7 @@ import { Game } from './game';
 import path from 'path';
 import cors from 'cors';
 import WebSocket from 'ws';
+import { GameMessage, GameAction, broadcastGameState, createErrorMessage, createGameStateMessage, handleGameAction } from './message-handler';
 
 const app = express();
 
@@ -25,12 +26,12 @@ wss.on('connection', (ws) => {
   console.log('Client connected');
 
   ws.on('message', (message) => {
-    const data = JSON.parse(message.toString());
+    const data = JSON.parse(message.toString()) as GameMessage;
 
     switch (data.type) {
       case 'join_game':
-        const gameId = data.gameId;
-        const playerId = data.playerId;
+        const gameId = data.gameId!;
+        const playerId = data.playerId!;
         
         // Store WebSocket -> playerId mapping
         wsToPlayer.set(ws, playerId);
@@ -47,10 +48,7 @@ wss.on('connection', (ws) => {
               game.addPlayer(playerId);
               playerSessions.set(playerId, gameId);
             } else {
-              ws.send(JSON.stringify({
-                type: 'error',
-                message: 'Game is full'
-              }));
+              ws.send(JSON.stringify(createErrorMessage('Game is full')));
               return;
             }
           }
@@ -60,18 +58,7 @@ wss.on('connection', (ws) => {
         if (!gameJoin) return;
 
         // Broadcast state to all players
-        wss.clients.forEach(client => {
-          if (client.readyState === WebSocket.OPEN) {
-            const clientPlayerId = wsToPlayer.get(client);
-            if (clientPlayerId) {
-              const playerState = gameJoin.getVisibleState(clientPlayerId);
-              client.send(JSON.stringify({
-                type: 'game_state',
-                state: playerState
-              }));
-            }
-          }
-        });
+        broadcastGameState(gameJoin, wsToPlayer, true);
         break;
 
       case 'action':
@@ -80,53 +67,11 @@ wss.on('connection', (ws) => {
         
         if (!game || !actionPlayerId) return;
 
-        if (!game.isPlayerTurn(actionPlayerId)) {
-          ws.send(JSON.stringify({ type: 'error', message: 'Not your turn' }));
-          return;
-        }
-
-        if (data.action.type === 'MOVE_UNIT') {
-          const success = game.moveUnit(
-            data.action.payload.unitId,
-            data.action.payload.destination
-          );
-
-          if (success) {
-              // After processing action, broadcast state to all players
-              wss.clients.forEach(client => {
-                if (client.readyState === WebSocket.OPEN) {
-                  const clientPlayerId = wsToPlayer.get(client);
-                  if (clientPlayerId) {
-                    const playerState = game.getVisibleState(clientPlayerId);
-                    client.send(JSON.stringify({
-                      type: 'game_state',
-                      state: playerState
-                    }));
-                  }
-                }
-              });
-          } else {
-            ws.send(JSON.stringify({
-              type: 'error',
-              message: 'Invalid move'
-            }));
-          }
-        } else if (data.action.type === 'END_TURN') {
-          game.endTurn();
-
-          // After processing action, broadcast state to all players
-          wss.clients.forEach(client => {
-            if (client.readyState === WebSocket.OPEN) {
-              const clientPlayerId = wsToPlayer.get(client);
-              if (clientPlayerId) {
-                const playerState = game.getVisibleState(clientPlayerId);
-                client.send(JSON.stringify({
-                  type: 'game_state',
-                  state: playerState
-                }));
-              }
-            }
-          });
+        const result = handleGameAction(game, actionPlayerId, data.action!);
+        if (result.success) {
+          broadcastGameState(game, wsToPlayer, true);
+        } else {
+          ws.send(JSON.stringify(createErrorMessage(result.error!)));
         }
         break;
       default:

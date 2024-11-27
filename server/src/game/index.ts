@@ -448,4 +448,29 @@ export class Game {
 
         return tiles;
     }
+
+    public toJSON() {
+        return {
+            map: this.map,
+            units: this.units,
+            players: this.players,
+            currentPlayerIndex: this.currentPlayerIndex,
+            mapSize: this.mapSize,
+            turnNumber: this.turnNumber,
+            gameId: this._gameId
+        };
+    }
+
+    public static fromJSON(data: any): Game {
+        const game = new Game(
+            data.mapSize,
+            data.players,
+            data.gameId,
+            data.map
+        );
+        game.units = data.units;
+        game.currentPlayerIndex = data.currentPlayerIndex;
+        game.turnNumber = data.turnNumber;
+        return game;
+    }
 }
