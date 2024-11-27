@@ -13,19 +13,33 @@ export class UIPanel {
     private endTurnText: Phaser.GameObjects.Text;
     private playerList: Phaser.GameObjects.Text;
     private turnNumberText: Phaser.GameObjects.Text;
+    private height: number;
 
-    constructor(scene: Phaser.Scene) {
+    constructor(scene: Phaser.Scene, height: number) {
         this.scene = scene;
+        this.height = height;
         this.createPanel();
     }
 
     private createPanel() {
-        // Panel background
-        this.background = this.scene.add.rectangle(0, 600, 800, 100, 0x222222)
-            .setOrigin(0, 0);
+        const gameHeight = this.scene.game.canvas.height;
+        
+        // Panel background at bottom of screen with high depth
+        this.background = this.scene.add.rectangle(
+            0,
+            gameHeight - this.height,
+            this.scene.game.canvas.width,
+            this.height,
+            0x222222
+        )
+        .setOrigin(0, 0)
+        .setDepth(100); // Set UI panel to higher depth
 
+        // Position all UI elements relative to the panel
+        const baseY = gameHeight - this.height + 20;
+        
         // Turn info text
-        this.turnInfo = this.scene.add.text(700, 620, '', {
+        this.turnInfo = this.scene.add.text(700, baseY, '', {
             color: '#ffffff',
             fontSize: '14px',
             align: 'right',
@@ -35,7 +49,7 @@ export class UIPanel {
 
         // Create array of text objects for unit info
         for (let i = 0; i < 5; i++) {
-            const text = this.scene.add.text(20, 610 + i * 16, '', {
+            const text = this.scene.add.text(20, baseY + i * 16, '', {
                 color: '#ffffff',
                 fontSize: '12px',
                 fontFamily: 'Arial'
@@ -44,7 +58,7 @@ export class UIPanel {
         }
 
         // Player list
-        this.playerList = this.scene.add.text(200, 610, '', {
+        this.playerList = this.scene.add.text(200, baseY, '', {
             color: '#ffffff',
             fontSize: '12px',
             fontFamily: 'Arial',
@@ -53,7 +67,7 @@ export class UIPanel {
         });
 
         // Add turn number text
-        this.turnNumberText = this.scene.add.text(700, 650, '', {
+        this.turnNumberText = this.scene.add.text(700, baseY + 40, '', {
             color: '#ffffff',
             fontSize: '12px',
             fontFamily: 'Arial'
@@ -88,6 +102,14 @@ export class UIPanel {
         this.fortifyButton.on('pointerdown', () => this.onFortifyClick());
         this.levelUpButton.on('pointerdown', () => this.onLevelUpClick());
         this.endTurnButton.on('pointerdown', () => this.onEndTurnClick());
+
+        // Set depth for all button elements
+        [this.fortifyButton, this.fortifyText, 
+         this.levelUpButton, this.levelUpText,
+         this.endTurnButton, this.endTurnText]
+            .forEach(element => {
+                if (element) element.setDepth(100);
+            });
     }
 
     public updateUnitInfo(unit: Unit | null) {

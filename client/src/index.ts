@@ -107,7 +107,7 @@ const game = GameSetup.createGame({
     gameActions,
     gameEvents,
     width: 800,
-    height: 700,
+    height: 550,
     backgroundColor: '#1099bb',
 },
     () => {

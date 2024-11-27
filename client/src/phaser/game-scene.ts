@@ -18,6 +18,7 @@ export class GameScene extends Phaser.Scene {
     private gameActions: GameActions;
     private gameEvents?: GameEventEmitter;
     private boundHandleGameState?: (state: GameState) => void;
+    private uiPanelHeight: number = 150;
 
     constructor() {
         super({ key: 'GameScene' });
@@ -30,21 +31,26 @@ export class GameScene extends Phaser.Scene {
         gameActions: GameActions;
         gameEvents: GameEventEmitter;
         onReady: () => void;
+        uiPanelHeight: number;
     }) {
         this.playerId = data.playerId;
         this.gameActions = data.gameActions;
         this.gameEvents = data.gameEvents;
+        this.uiPanelHeight = data.uiPanelHeight;
 
-        // Create view with viewport dimensions
+        // Create view with adjusted viewport dimensions
         this.view = new View(
             this.game.canvas.width,
-            this.game.canvas.height - 100,
+            this.game.canvas.height - this.uiPanelHeight,
             this.hexSize
         );
 
-        // Create UI Panel and map container early
-        this.uiPanel = new UIPanel(this);
+        // Create map container with proper positioning and depth
         this.mapContainer = this.add.container(0, 0);
+        this.mapContainer.setDepth(0); // Set map to lowest depth
+
+        // Create UI Panel with higher depth
+        this.uiPanel = new UIPanel(this, this.uiPanelHeight);
 
         // Subscribe to game state updates with type safety
         this.boundHandleGameState = this.handleGameState.bind(this);
@@ -76,7 +82,7 @@ export class GameScene extends Phaser.Scene {
 
         // Calculate initial view position
         const initialX = (this.game.canvas.width - mapWidth * this.hexSize * 2 * 0.75) / 2;
-        const initialY = (this.game.canvas.height - 100 - mapHeight * this.hexSize * Math.sqrt(3)) / 2;
+        const initialY = (this.game.canvas.height - this.uiPanelHeight - mapHeight * this.hexSize * Math.sqrt(3)) / 2;
         this.view.setPosition(0, 0);
 
         // Only keep left-click handler

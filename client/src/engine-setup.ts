@@ -89,10 +89,11 @@ export class GameSetup {
         config: GameSetupConfig,
         onReady: () => void
     ) {
+        const UI_PANEL_HEIGHT = 150;
         const phaserConfig = {
             type: Phaser.AUTO,
             width: config.width || this.DEFAULT_WIDTH,
-            height: config.height || this.DEFAULT_HEIGHT,
+            height: (config.height || this.DEFAULT_HEIGHT) + UI_PANEL_HEIGHT,
             backgroundColor: config.backgroundColor || this.DEFAULT_BG_COLOR,
             scene: PhaserGameScene
         };
@@ -103,6 +104,7 @@ export class GameSetup {
             gameActions: config.gameActions,
             gameEvents: config.gameEvents,
             onReady: onReady,
+            uiPanelHeight: UI_PANEL_HEIGHT
         });
         return game;
     }
