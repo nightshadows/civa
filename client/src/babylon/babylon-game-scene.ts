@@ -4,6 +4,7 @@ import { BabylonHexGrid } from './babylon-hex-grid';
 import { BabylonUIPanel } from './babylon-ui-panel';
 import { GameEventEmitter } from '../events';
 import { GameActions } from 'src/engine-setup';
+import { BabylonView } from './babylon-view';
 
 export class BabylonGameScene {
     private scene: Scene;
@@ -20,6 +21,7 @@ export class BabylonGameScene {
     private boundHandleGameState?: (state: GameState) => void;
     private currentGameState?: GameState;
     private camera: ArcRotateCamera;
+    private view: BabylonView;
 
     constructor(private canvas: HTMLCanvasElement) {
         this.hexSize = 1; // Babylon uses different scale
@@ -35,6 +37,13 @@ export class BabylonGameScene {
         
         // Add lighting
         const light = new HemisphericLight("light", new Vector3(0, 1, 0), this.scene);
+        
+        // Create view manager
+        this.view = new BabylonView(
+            canvas.width,
+            canvas.height,
+            this.hexSize
+        );
         
         // Start render loop
         this.engine.runRenderLoop(() => {
@@ -173,6 +182,10 @@ export class BabylonGameScene {
         textPlane.scaling.x = 1;
         textPlane.scaling.y = 1;
 
+        // Use view to convert hex position to world position
+        const worldPos = this.view.hexToWorld(position);
+        container.position = new Vector3(worldPos.x, 0, worldPos.y);
+
         return container;
     }
 
@@ -207,14 +220,14 @@ export class BabylonGameScene {
         // Create tiles
         tiles.forEach(tile => {
             const hexContainer = this.createHexMesh(tile.type, tile.position);
-            const worldPos = this.hexGrid.hexToWorld(tile.position);
+            const worldPos = this.view.hexToWorld(tile.position);
             hexContainer.position = new Vector3(worldPos.x, 0, worldPos.y);
         });
 
         // Create units
         units.forEach(unit => {
             const unitMesh = this.createUnitMesh(unit);
-            const worldPos = this.hexGrid.hexToWorld(unit.position);
+            const worldPos = this.view.hexToWorld(unit.position);
             unitMesh.position = new Vector3(worldPos.x, 0.5, worldPos.y);
         });
     }
@@ -226,13 +239,11 @@ export class BabylonGameScene {
                 this.scene.pointerY
             );
             if (pickResult.hit) {
-                // Convert 3D position to 2D world position
-                const worldPos = new Vector2(
+                // Convert 3D position to hex coordinates using view
+                const hexPos = this.view.worldToHex(
                     pickResult.pickedPoint!.x,
                     pickResult.pickedPoint!.z  // Use z for y in 2D coordinates
                 );
-                // Convert to hex coordinates
-                const hexPos = this.hexGrid.worldToHex(worldPos.x, worldPos.y);
                 this.handleHexClick(hexPos);
             }
         };
@@ -317,7 +328,7 @@ export class BabylonGameScene {
         );
 
         highlightHexes.forEach(hexPos => {
-            const worldPos = this.hexGrid.hexToWorld(hexPos);
+            const worldPos = this.view.hexToWorld(hexPos);
             const highlight = this.createHexHighlight(worldPos);
             this.highlightedHexes.push(highlight);
         });
@@ -361,7 +372,7 @@ export class BabylonGameScene {
             this.selectedUnitMesh.dispose();
         }
 
-        const worldPos = this.hexGrid.hexToWorld(unit.position);
+        const worldPos = this.view.hexToWorld(unit.position);
         
         // Center camera on unit position
         const targetPosition = new Vector3(worldPos.x, 0, worldPos.y);
