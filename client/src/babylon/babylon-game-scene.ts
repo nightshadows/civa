@@ -1,9 +1,10 @@
-import { Engine, Scene, ArcRotateCamera, Vector3, HemisphericLight, Material, MeshBuilder, StandardMaterial, Color3, TransformNode, Vector2, DynamicTexture, Mesh } from '@babylonjs/core';
+import { Engine, Scene, ArcRotateCamera, Vector3, HemisphericLight, Material, MeshBuilder, StandardMaterial, Color3, TransformNode, Vector2, DynamicTexture, Mesh, FresnelParameters, Animation } from '@babylonjs/core';
 import { TileType, Position, GameState, UnitType, Unit } from '@shared/types';
 import { BabylonHexGrid } from './babylon-hex-grid';
 import { BabylonUIPanel } from './babylon-ui-panel';
 import { GameActions, GameEventEmitter } from 'src/engine-setup';
 import { BabylonView } from './babylon-view';
+import { BabylonHexMeshFactory } from './babylon-hex-mesh-factory';
 
 export class BabylonGameScene {
     private scene: Scene;
@@ -21,6 +22,9 @@ export class BabylonGameScene {
     private currentGameState?: GameState;
     private camera: ArcRotateCamera;
     private view: BabylonView;
+    private hexMeshFactory: BabylonHexMeshFactory;
+    private tileMeshes: Map<string, TransformNode> = new Map();
+    private unitMeshes: Map<string, TransformNode> = new Map();
 
     constructor(private canvas: HTMLCanvasElement) {
         this.hexSize = 1; // Babylon uses different scale
@@ -48,11 +52,13 @@ export class BabylonGameScene {
         this.engine.runRenderLoop(() => {
             this.scene.render();
         });
+
+        this.hexMeshFactory = new BabylonHexMeshFactory(this.scene, this.hexSize);
     }
 
     init(data: {
         playerId: string;
-        gameActions: GameActions;  
+        gameActions: GameActions;
         gameEvents: GameEventEmitter;
         onReady: () => void;
     }) {
@@ -99,131 +105,73 @@ export class BabylonGameScene {
         if (this.gameEvents && this.boundHandleGameState) {
             this.gameEvents.off('updateGameState', this.boundHandleGameState);
         }
+
+        // Properly dispose of all cached meshes
+        this.tileMeshes.forEach(mesh => mesh.dispose());
+        this.unitMeshes.forEach(mesh => mesh.dispose());
+        this.tileMeshes.clear();
+        this.unitMeshes.clear();
+
         this.engine.dispose();
     }
 
-    private createHexMesh(type: TileType, position: Position): TransformNode {
-        const container = new TransformNode("hexContainer", this.scene);
-
-        // Create hex mesh
-        const hexMaterial = new StandardMaterial("hexMat", this.scene);
-
-        // Set material color based on tile type
-        switch (type) {
-            case TileType.GRASS:
-                hexMaterial.diffuseColor = new Color3(0.4, 0.8, 0.4);
-                break;
-            case TileType.FOREST:
-                hexMaterial.diffuseColor = new Color3(0.2, 0.6, 0.2);
-                break;
-            case TileType.HILLS:
-                hexMaterial.diffuseColor = new Color3(0.6, 0.4, 0.2);
-                break;
-            case TileType.WATER:
-                hexMaterial.diffuseColor = new Color3(0.2, 0.4, 0.8);
-                break;
-        }
-
-        const hex = MeshBuilder.CreateCylinder("hex", {
-            height: 0.1,
-            diameter: this.hexSize * 2,
-            tessellation: 6
-        }, this.scene);
-
-        hex.material = hexMaterial;
-        hex.parent = container;
-
-        // Create text plane
-        const textPlane = MeshBuilder.CreatePlane("textPlane", {
-            width: 2,
-            height: 1,
-        }, this.scene);
-        textPlane.parent = container;
-        textPlane.position.y = 0.1;
-        textPlane.rotation.x = Math.PI / 2;
-
-        // Create texture with transparency
-        const textTexture = new DynamicTexture(
-            `textTexture_${position.x}_${position.y}`,
-            { width: 1024, height: 512 },
-            this.scene,
-            true
-        );
-
-        const textMaterial = new StandardMaterial(`textMaterial_${position.x}_${position.y}`, this.scene);
-        textMaterial.diffuseTexture = textTexture;
-        textMaterial.specularColor = new Color3(0, 0, 0);
-        textMaterial.backFaceCulling = false;
-        textMaterial.emissiveColor = new Color3(1, 1, 1);
-
-        // Enable transparency
-        textMaterial.useAlphaFromDiffuseTexture = true;
-        textMaterial.diffuseTexture.hasAlpha = true;
-        textMaterial.transparencyMode = Material.MATERIAL_ALPHABLEND;
-
-        textPlane.material = textMaterial;
-
-        // Draw text on transparent background
-        const ctx = textTexture.getContext() as CanvasRenderingContext2D;
-        ctx.clearRect(0, 0, 1024, 512); // Clear with transparency
-        ctx.fillStyle = "black";
-        ctx.font = "bold 240px Arial";
-        ctx.textAlign = "center";
-        ctx.textBaseline = "middle";
-        ctx.fillText(`${position.x},${position.y}`, 512, 256);
-        textTexture.update();
-
-        // Adjust plane scaling
-        textPlane.scaling.x = 1;
-        textPlane.scaling.y = 1;
-
-        // Use view to convert hex position to world position
-        const worldPos = this.view.hexToWorld(position);
-        container.position = new Vector3(worldPos.x, 0, worldPos.y);
-
-        return container;
-    }
-
-    private createUnitMesh(unit: Unit): TransformNode {
-        const unitMaterial = new StandardMaterial("unitMat", this.scene);
-        unitMaterial.diffuseColor = unit.playerId === this.playerId ?
-            new Color3(0, 1, 0) : new Color3(1, 0, 0);
-
-        const unitMesh = MeshBuilder.CreateBox("unit", {
-            height: 0.5,
-            width: 0.3,
-            depth: 0.3
-        }, this.scene);
-
-        unitMesh.material = unitMaterial;
-
-        return unitMesh;
-    }
-
     public renderMap(tiles: { type: TileType; position: Position }[], units: Unit[] = []): void {
-        // Clear existing meshes and TransformNodes
-        this.scene.meshes.slice().forEach(mesh => {
-            if (mesh.name !== "camera") {
-                mesh.dispose();
+        // Track which meshes are still in use
+        const usedTileMeshes = new Set<string>();
+        const usedUnitMeshes = new Set<string>();
+
+        // Update tiles
+        tiles.forEach(tile => {
+            const tileKey = `tile_${tile.position.x}_${tile.position.y}`;
+            let hexContainer = this.tileMeshes.get(tileKey);
+            const worldPos = this.view.hexToWorld(tile.position);
+
+            if (!hexContainer) {
+                // Create new mesh only if it doesn't exist
+                hexContainer = this.hexMeshFactory.createHexMesh(tile.type, tile.position);
+                this.tileMeshes.set(tileKey, hexContainer);
+            }
+
+            // Update position
+            hexContainer.position = new Vector3(worldPos.x, 0, worldPos.y);
+            hexContainer.setEnabled(true);
+            usedTileMeshes.add(tileKey);
+        });
+
+        // Update units
+        units.forEach(unit => {
+            const unitKey = `unit_${unit.id}`;
+            let unitMesh = this.unitMeshes.get(unitKey);
+            const worldPos = this.view.hexToWorld(unit.position);
+
+            if (!unitMesh) {
+                // Create new mesh only if it doesn't exist
+                unitMesh = this.hexMeshFactory.createUnitMesh(unit, this.playerId);
+                this.unitMeshes.set(unitKey, unitMesh);
+            }
+
+            // Update position - ensure unit is positioned correctly
+            unitMesh.position = new Vector3(worldPos.x, 0, worldPos.y); // Changed from 0.5 to 0 for base height
+            
+            // Reset rotation and scaling to defaults (in case they were changed)
+            unitMesh.rotation = Vector3.Zero();
+            unitMesh.scaling = Vector3.One();
+            
+            unitMesh.setEnabled(true);
+            usedUnitMeshes.add(unitKey);
+        });
+
+        // Hide unused meshes
+        this.tileMeshes.forEach((mesh, key) => {
+            if (!usedTileMeshes.has(key)) {
+                mesh.setEnabled(false);
             }
         });
 
-        this.scene.transformNodes.slice().forEach(node => {
-            node.dispose();
-        });
-
-        // Create tiles
-        tiles.forEach(tile => {
-            const hexContainer = this.createHexMesh(tile.type, tile.position);
-            const worldPos = this.view.hexToWorld(tile.position);
-            hexContainer.position = new Vector3(worldPos.x, 0, worldPos.y);
-        });
-
-        // Create units
-        units.forEach(unit => {
-            const unitMesh = this.createUnitMesh(unit);
-            const worldPos = this.view.hexToWorld(unit.position);
-            unitMesh.position = new Vector3(worldPos.x, 0.5, worldPos.y);
+        this.unitMeshes.forEach((mesh, key) => {
+            if (!usedUnitMeshes.has(key)) {
+                mesh.setEnabled(false);
+            }
         });
     }
 
@@ -248,21 +196,21 @@ export class BabylonGameScene {
         console.info('Hex clicked', hexPos);
         if (!this.currentGameState) return;
 
-        const clickedUnit = this.currentGameState.visibleUnits.find(unit =>
-            unit.position.x === hexPos.x && unit.position.y === hexPos.y
+        const clickedUnit = this.getVisibleUnits().find(u =>
+            u.position.x === hexPos.x && u.position.y === hexPos.y
         );
 
         if (clickedUnit) {
             if (clickedUnit.playerId === this.playerId) {
-                if (this.selectedUnit?.id === clickedUnit.id) {
-                    this.clearSelection();
-                } else {
-                    this.selectedUnit = clickedUnit;
-                    this.highlightSelectedUnit(clickedUnit);
+                // Select the clicked unit
+                this.selectedUnit = clickedUnit;
+                this.highlightSelectedUnit(clickedUnit);
+                if (clickedUnit.movementPoints > 0) {
                     this.showMovementRange(clickedUnit);
                 }
             }
-        } else if (this.selectedUnit) {
+        } else if (this.selectedUnit.movementPoints > 0) {
+            // Try to move the selected unit
             const mapData = this.currentGameState.visibleTiles.reduce((acc: TileType[][], tile) => {
                 if (!acc[tile.position.y]) acc[tile.position.y] = [];
                 acc[tile.position.y][tile.position.x] = tile.type;
@@ -289,6 +237,26 @@ export class BabylonGameScene {
     private handleGameState(state: GameState) {
         this.currentGameState = state;
         this.renderMap(state.visibleTiles, state.visibleUnits);
+        
+        // Update highlight position if there's a selected unit
+        if (this.selectedUnit) {
+            const updatedUnit = state.visibleUnits.find(u => u.id === this.selectedUnit!.id);
+            if (updatedUnit) {
+                this.selectedUnit = updatedUnit; // Update the selected unit reference
+                this.highlightSelectedUnit(updatedUnit);
+                
+                // Recalculate movement range after unit has moved
+                if (updatedUnit.movementPoints > 0) {
+                    this.showMovementRange(updatedUnit);
+                } else {
+                    this.clearHighlights(); // Clear highlights if no movement points left
+                }
+            } else {
+                // Unit is no longer visible or was removed
+                this.clearSelection();
+            }
+        }
+
         this.uiPanel.updateTurnInfo(state.currentPlayerId, state.playerId, state.turnNumber);
         this.uiPanel.updatePlayerList(state);
     }
@@ -303,6 +271,11 @@ export class BabylonGameScene {
 
         this.clearHighlights();
 
+        // Only show movement range if unit has movement points
+        if (unit.movementPoints <= 0) {
+            return;
+        }
+
         const mapData = this.currentGameState.visibleTiles.reduce((acc: TileType[][], tile) => {
             if (!acc[tile.position.y]) acc[tile.position.y] = [];
             acc[tile.position.y][tile.position.x] = tile.type;
@@ -316,7 +289,6 @@ export class BabylonGameScene {
             mapData
         );
         console.info('Showing movementHexes', movementHexes);
-
 
         const highlightHexes = movementHexes.filter(hex =>
             !(hex.x === unit.position.x && hex.y === unit.position.y)
@@ -355,30 +327,40 @@ export class BabylonGameScene {
         this.selectedUnit = null;
         this.clearHighlights();
         if (this.selectedUnitMesh) {
-            this.selectedUnitMesh.dispose();
-            this.selectedUnitMesh = null;
+            this.selectedUnitMesh.setEnabled(false); // Hide instead of dispose
         }
         this.uiPanel.updateUnitInfo(null);
     }
 
     private highlightSelectedUnit(unit: Unit): void {
-        // Clear any existing selection highlight
-        if (this.selectedUnitMesh) {
-            this.selectedUnitMesh.dispose();
-        }
-
         const worldPos = this.view.hexToWorld(unit.position);
-
-        // Center camera on unit position
         const targetPosition = new Vector3(worldPos.x, 0, worldPos.y);
+        
+        // Center camera on unit position
         this.centerCameraOnPosition(targetPosition);
 
-        // Create highlight mesh (existing code)
+        // Create highlight mesh if it doesn't exist
+        if (!this.selectedUnitMesh) {
+            this.createSelectionHighlight();
+        }
+
+        // Update highlight position and ensure it's visible
+        this.selectedUnitMesh!.position = new Vector3(worldPos.x, 0.05, worldPos.y);
+        this.selectedUnitMesh!.setEnabled(true);
+
+        // Update UI
+        this.uiPanel.updateUnitInfo(unit);
+    }
+
+    // Separate method to create the highlight mesh
+    private createSelectionHighlight(): void {
+        // Create highlight material
         const highlightMaterial = new StandardMaterial("selectedUnitMat", this.scene);
         highlightMaterial.diffuseColor = new Color3(1, 1, 0);
         highlightMaterial.alpha = 0.5;
         highlightMaterial.emissiveColor = new Color3(0.5, 0.5, 0);
 
+        // Create highlight mesh
         this.selectedUnitMesh = MeshBuilder.CreateCylinder("selectedUnit", {
             height: 0.15,
             diameter: this.hexSize * 1.5,
@@ -386,9 +368,6 @@ export class BabylonGameScene {
         }, this.scene);
 
         this.selectedUnitMesh.material = highlightMaterial;
-        this.selectedUnitMesh.position = new Vector3(worldPos.x, 0.05, worldPos.y);
-
-        this.uiPanel.updateUnitInfo(unit);
     }
 
     private centerCameraOnPosition(position: Vector3, duration: number = 1000): void {
