@@ -24,7 +24,7 @@ export class UIPanel {
     private createPanel() {
         const gameHeight = this.scene.game.canvas.height;
         
-        // Panel background at bottom of screen with high depth
+        // Panel background at bottom of screen
         this.background = this.scene.add.rectangle(
             0,
             gameHeight - this.height,
@@ -33,7 +33,7 @@ export class UIPanel {
             0x222222
         )
         .setOrigin(0, 0)
-        .setDepth(100); // Set UI panel to higher depth
+        .setDepth(100);
 
         // Position all UI elements relative to the panel
         const baseY = gameHeight - this.height + 20;
@@ -45,7 +45,7 @@ export class UIPanel {
             align: 'right',
             fontFamily: 'Arial',
             fontStyle: 'bold'
-        });
+        }).setDepth(101);
 
         // Create array of text objects for unit info
         for (let i = 0; i < 5; i++) {
@@ -53,7 +53,7 @@ export class UIPanel {
                 color: '#ffffff',
                 fontSize: '12px',
                 fontFamily: 'Arial'
-            });
+            }).setDepth(101);
             this.unitInfoTexts.push(text);
         }
 
@@ -64,52 +64,61 @@ export class UIPanel {
             fontFamily: 'Arial',
             backgroundColor: '#333333',
             padding: { x: 8, y: 4 }
-        });
+        }).setDepth(101);
 
         // Add turn number text
         this.turnNumberText = this.scene.add.text(700, baseY + 40, '', {
             color: '#ffffff',
             fontSize: '12px',
             fontFamily: 'Arial'
-        });
+        }).setDepth(101);
 
         this.createButtons();
     }
 
     private createButtons() {
+        const baseY = this.scene.game.canvas.height - this.height + 80;
+
         // Fortify button
-        this.fortifyButton = this.scene.add.rectangle(400, 625, 100, 50, 0x666666)
-            .setInteractive();
-        this.fortifyText = this.scene.add.text(400, 625, 'Fortify', {
-            color: '#ffffff'
-        }).setOrigin(0.5);
+        this.fortifyButton = this.scene.add.rectangle(400, baseY, 100, 30, 0x666666)
+            .setInteractive()
+            .setDepth(101);
+        this.fortifyText = this.scene.add.text(400, baseY, 'Fortify', {
+            color: '#ffffff',
+            fontSize: '12px',
+            fontFamily: 'Arial'
+        })
+        .setOrigin(0.5)
+        .setDepth(102);
 
         // Level Up button
-        this.levelUpButton = this.scene.add.rectangle(520, 625, 100, 50, 0x666666)
-            .setInteractive();
-        this.levelUpText = this.scene.add.text(520, 625, 'Level Up', {
-            color: '#ffffff'
-        }).setOrigin(0.5);
+        this.levelUpButton = this.scene.add.rectangle(520, baseY, 100, 30, 0x666666)
+            .setInteractive()
+            .setDepth(101);
+        this.levelUpText = this.scene.add.text(520, baseY, 'Level Up', {
+            color: '#ffffff',
+            fontSize: '12px',
+            fontFamily: 'Arial'
+        })
+        .setOrigin(0.5)
+        .setDepth(102);
 
         // End Turn button
-        this.endTurnButton = this.scene.add.rectangle(640, 625, 100, 50, 0x666666)
-            .setInteractive();
-        this.endTurnText = this.scene.add.text(640, 625, 'End Turn', {
-            color: '#ffffff'
-        }).setOrigin(0.5);
+        this.endTurnButton = this.scene.add.rectangle(640, baseY, 100, 30, 0x666666)
+            .setInteractive()
+            .setDepth(101);
+        this.endTurnText = this.scene.add.text(640, baseY, 'End Turn', {
+            color: '#ffffff',
+            fontSize: '12px',
+            fontFamily: 'Arial'
+        })
+        .setOrigin(0.5)
+        .setDepth(102);
 
         // Add click handlers
         this.fortifyButton.on('pointerdown', () => this.onFortifyClick());
         this.levelUpButton.on('pointerdown', () => this.onLevelUpClick());
         this.endTurnButton.on('pointerdown', () => this.onEndTurnClick());
-
-        // Set depth for all button elements
-        [this.fortifyButton, this.fortifyText, 
-         this.levelUpButton, this.levelUpText,
-         this.endTurnButton, this.endTurnText]
-            .forEach(element => {
-                if (element) element.setDepth(100);
-            });
     }
 
     public updateUnitInfo(unit: Unit | null) {
