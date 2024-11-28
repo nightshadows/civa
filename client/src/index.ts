@@ -132,6 +132,15 @@ const gameActions: GameActions = {
             type: 'list_games',
             playerId: playerId
         }));
+    },
+
+    createGame: (gameId) => {
+        console.info('Creating new game', gameId);
+        socket.send(JSON.stringify({
+            type: 'create_game',
+            gameId,
+            playerId
+        }));
     }
 };
 

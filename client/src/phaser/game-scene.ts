@@ -95,6 +95,7 @@ export class GameScene extends Phaser.Scene {
         this.events.on('fortify_unit', this.handleFortify, this);
         this.events.on('level_up_unit', this.handleLevelUp, this);
         this.events.on('end_turn', this.handleEndTurn, this);
+        this.events.on('new_game', this.handleNewGame, this);
 
         this.debugText = this.add.text(10, 10, '', {
             color: '#ffffff',
@@ -377,6 +378,11 @@ export class GameScene extends Phaser.Scene {
         const worldPos = this.view.screenToWorld(pointer.x, pointer.y);
         const gameState = this.registry.get('gameState') as GameState;
 
+        // Early return if no game state
+        if (!gameState) {
+            return;
+        }
+
         // Create map data for movement calculation
         const mapData = gameState.visibleTiles.reduce((acc: TileType[][], tile) => {
             if (!acc[tile.position.y]) acc[tile.position.y] = [];
@@ -453,6 +459,18 @@ export class GameScene extends Phaser.Scene {
 
     private handleEndTurn() {
         this.gameActions.endTurn();
+    }
+
+    private handleNewGame() {
+        // Clear current game state
+        this.registry.set('gameState', null);
+        this.clearSelection();
+        this.clearHighlights();
+        this.renderMap([], []); // Clear the map
+
+        // Create new game
+        const newGameId = 'game-' + Math.random().toString(36).substring(2, 9);
+        this.gameActions.createGame(newGameId);
     }
 
     private handleGameState(state: GameState) {

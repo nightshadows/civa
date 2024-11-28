@@ -8,6 +8,7 @@ export interface GameActions {
     endTurn: () => void;
     joinGame: (gameId: string) => void;
     listGames: () => void;
+    createGame: (gameId: string) => void;
 }
 
 export type GameEvents = {
@@ -36,7 +37,7 @@ export class GameEventEmitter {
     emit<K extends keyof GameEvents>(event: K, data: GameEvents[K]) {
         this.listeners[event]?.forEach(callback => callback(data));
     }
-} 
+}
 
 export interface GameSetupConfig {
     playerId: string;
@@ -110,4 +111,4 @@ export class GameSetup {
         });
         return game;
     }
-} 
+}

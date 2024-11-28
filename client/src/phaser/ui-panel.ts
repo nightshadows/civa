@@ -14,6 +14,8 @@ export class UIPanel {
     private playerList: Phaser.GameObjects.Text;
     private turnNumberText: Phaser.GameObjects.Text;
     private height: number;
+    private newGameButton: Phaser.GameObjects.Rectangle;
+    private newGameText: Phaser.GameObjects.Text;
 
     constructor(scene: Phaser.Scene, height: number) {
         this.scene = scene;
@@ -23,7 +25,7 @@ export class UIPanel {
 
     private createPanel() {
         const gameHeight = this.scene.game.canvas.height;
-        
+
         // Panel background at bottom of screen
         this.background = this.scene.add.rectangle(
             0,
@@ -37,7 +39,7 @@ export class UIPanel {
 
         // Position all UI elements relative to the panel
         const baseY = gameHeight - this.height + 20;
-        
+
         // Turn info text
         this.turnInfo = this.scene.add.text(700, baseY, '', {
             color: '#ffffff',
@@ -115,10 +117,23 @@ export class UIPanel {
         .setOrigin(0.5)
         .setDepth(102);
 
+        // New Game button (positioned below End Turn button)
+        this.newGameButton = this.scene.add.rectangle(640, baseY + 40, 100, 30, 0x666666)
+            .setInteractive()
+            .setDepth(101);
+        this.newGameText = this.scene.add.text(640, baseY + 40, 'New Game', {
+            color: '#ffffff',
+            fontSize: '12px',
+            fontFamily: 'Arial'
+        })
+        .setOrigin(0.5)
+        .setDepth(102);
+
         // Add click handlers
         this.fortifyButton.on('pointerdown', () => this.onFortifyClick());
         this.levelUpButton.on('pointerdown', () => this.onLevelUpClick());
         this.endTurnButton.on('pointerdown', () => this.onEndTurnClick());
+        this.newGameButton.on('pointerdown', () => this.onNewGameClick());
     }
 
     public updateUnitInfo(unit: Unit | null) {
@@ -164,6 +179,10 @@ export class UIPanel {
 
     private onEndTurnClick() {
         this.scene.events.emit('end_turn');
+    }
+
+    private onNewGameClick() {
+        this.scene.events.emit('new_game');
     }
 
     public updatePlayerList(gameState: GameState) {

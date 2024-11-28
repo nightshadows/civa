@@ -1,4 +1,5 @@
 import { Game } from "./game";
+import { PlayerType, PlayerConfig } from "./game/player-types";
 
 export type GameAction = {
   type: 'MOVE_UNIT' | 'END_TURN';
@@ -9,7 +10,7 @@ export type GameAction = {
 };
 
 export type GameMessage = {
-  type: 'join_game' | 'action' | 'game_state' | 'error' | 'list_games' | 'games_list';
+  type: 'join_game' | 'action' | 'game_state' | 'error' | 'list_games' | 'games_list' | 'create_game';
   gameId?: string;
   playerId?: string;
   action?: GameAction;
@@ -41,7 +42,7 @@ export function createGamesListMessage(games: string[]): GameMessage {
 
 export function handleGameAction(
   game: any,  // Replace 'any' with your Game type
-  playerId: string, 
+  playerId: string,
   action: GameAction
 ): { success: boolean; error?: string } {
   console.log('Handling action:', action, 'for player:', playerId);
@@ -54,7 +55,7 @@ export function handleGameAction(
       action.payload.unitId,
       action.payload.destination
     );
-    return { 
+    return {
       success,
       error: success ? undefined : 'Invalid move'
     };
@@ -64,7 +65,7 @@ export function handleGameAction(
   }
 
   return { success: false, error: 'Invalid action type' };
-} 
+}
 
 export interface GameWebSocket {
   send(data: string): void;
@@ -95,7 +96,7 @@ export function broadcastGameState(
 export function handleJoinGame(
   data: GameMessage,
   ws: GameWebSocket,
-  sessions: Map<string, GameWebSocket>,  // Always playerId -> WebSocket
+  sessions: Map<string, GameWebSocket>,
   gameManager: GameManager
 ): { game: Game | null; error?: string } {
   const gameId = data.gameId || 'default';
@@ -112,7 +113,10 @@ export function handleJoinGame(
 
   // Handle joining game
   if (!gameManager.games.has(gameId)) {
-    const newGame = new Game(12, [playerId], gameId);
+    const players: PlayerConfig[] = [
+      { id: playerId, type: PlayerType.HUMAN }
+    ];
+    const newGame = new Game(12, players, gameId);
     gameManager.games.set(gameId, newGame);
     gameManager.playerSessions.set(playerId, gameId);
     console.log(`Created new game ${gameId} for player ${playerId}`);
@@ -122,7 +126,7 @@ export function handleJoinGame(
   const game = gameManager.games.get(gameId)!;
   if (!game.hasPlayer(playerId)) {
     if (game.canAddPlayer()) {
-      game.addPlayer(playerId);
+      game.addPlayer({ id: playerId, type: PlayerType.HUMAN });
       gameManager.playerSessions.set(playerId, gameId);
       console.log(`Added player ${playerId} to game ${gameId}`);
     } else {
@@ -141,7 +145,7 @@ export function getAvailableGames(
   playerId?: string
 ): string[] {
   return Array.from(gameManager.games.entries())
-    .filter(([_, game]) => 
+    .filter(([_, game]) =>
       game.canAddPlayer() || (playerId && game.hasPlayer(playerId))
     )
     .map(([gameId]) => gameId);
@@ -179,7 +183,7 @@ export function handleGameMessage(
       const playerId = data.playerId!;
       const gameId = gameManager.playerSessions.get(playerId);
       console.log('Action from player:', playerId, 'in game:', gameId);
-      
+
       if (!gameId) {
         console.error('No game session found for player:', playerId);
         ws.send(JSON.stringify(createErrorMessage('No active game session')));
@@ -202,6 +206,19 @@ export function handleGameMessage(
       }
     }
 
+    case 'create_game': {
+      const result = handleCreateGame(data, ws, sessions, gameManager);
+      if (result.error) {
+        ws.send(JSON.stringify(createErrorMessage(result.error)));
+        return { error: result.error };
+      }
+      if (result.game) {
+        broadcastGameState(result.game, sessions);
+        return { game: result.game };
+      }
+      break;
+    }
+
     default:
       return { error: 'Unknown message type' };
   }
@@ -213,4 +230,40 @@ export function getPlayerIdFromWs(ws: GameWebSocket, sessions: Map<string, GameW
     if (socket === ws) return playerId;
   }
   return null;
+}
+
+export function handleCreateGame(
+    data: GameMessage,
+    ws: GameWebSocket,
+    sessions: Map<string, GameWebSocket>,
+    gameManager: GameManager
+): { game: Game | null; error?: string } {
+  const playerId = data.playerId!;
+  const gameId = data.gameId || 'default';
+
+  // Clear existing game if it exists
+  if (gameManager.games.has(gameId)) {
+      gameManager.games.delete(gameId);
+  }
+
+  // Clear any existing session for this player
+  const oldGameId = gameManager.playerSessions.get(playerId);
+  if (oldGameId) {
+      gameManager.playerSessions.delete(playerId);
+  }
+
+  // Create player configurations
+  const players: PlayerConfig[] = [
+      { id: playerId, type: PlayerType.HUMAN },
+      { id: 'ai-player-1', type: PlayerType.AI }
+  ];
+
+  // Create new game with configured players
+  const newGame = new Game(12, players, gameId);
+  gameManager.games.set(gameId, newGame);
+  gameManager.playerSessions.set(playerId, gameId);
+  sessions.set(playerId, ws);
+
+  console.log(`Created new game ${gameId} with player ${playerId} and AI`);
+  return { game: newGame };
 }

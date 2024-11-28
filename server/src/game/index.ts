@@ -1,6 +1,8 @@
 import { TileType, Position, Unit, GameState, UnitType, Tile } from '../../../shared/src/types';
 import { getStartingUnits, createUnit, resetUnitMovement } from './units';
 import { getMovementCost } from '../../../shared/src/terrain';
+import { AIPlayer } from './ai-player';
+import { PlayerConfig, PlayerType } from './player-types';
 
 export class Game {
     public map: TileType[][];
@@ -11,19 +13,28 @@ export class Game {
     private readonly MAX_PLAYERS = 2;
     private _gameId: string;
     private turnNumber: number = 1;
+    private aiPlayers: Map<string, AIPlayer> = new Map();
 
-    constructor(mapSize: number, players: string[], gameId: string, fixedMap?: TileType[][]) {
+    constructor(mapSize: number, players: PlayerConfig[], gameId: string, fixedMap?: TileType[][]) {
         this.mapSize = mapSize;
-        this.players = players;
         this._gameId = gameId;
         this.currentPlayerIndex = 0;
         this.map = fixedMap || this.generateMap();
         this.units = [];
 
-        // Initialize units for initial players
-        players.forEach((playerId, index) => {
-            const playerUnits = this.initializeUnitsForPlayer(playerId, index);
+        // Store player IDs
+        this.players = players.map(p => p.id);
+
+        // Initialize units and AI players
+        players.forEach((player, index) => {
+            // Initialize units
+            const playerUnits = this.initializeUnitsForPlayer(player.id, index);
             this.units.push(...playerUnits);
+
+            // Initialize AI if needed
+            if (player.type === PlayerType.AI) {
+                this.aiPlayers.set(player.id, new AIPlayer(gameId, player.id));
+            }
         });
     }
 
@@ -31,14 +42,18 @@ export class Game {
         return this.players.length < this.MAX_PLAYERS;
     }
 
-    public addPlayer(playerId: string): void {
-        if (!this.canAddPlayer()) {
-            throw new Error('Game is full');
+    public addPlayer(player: PlayerConfig): boolean {
+        if (this.players.length >= 2 || this.hasPlayer(player.id)) {
+            return false;
         }
-        this.players.push(playerId);
-        // Initialize units for the new player
-        const newUnits = this.initializeUnitsForPlayer(playerId, this.players.length - 1);
-        this.units.push(...newUnits);
+        this.players.push(player.id);
+
+        // Initialize AI if needed
+        if (player.type === PlayerType.AI) {
+            this.aiPlayers.set(player.id, new AIPlayer(this._gameId, player.id));
+        }
+
+        return true;
     }
 
     private initializeUnitsForPlayer(playerId: string, playerIndex: number): Unit[] {
@@ -244,10 +259,18 @@ export class Game {
             this.turnNumber++;
         }
 
+        const currentPlayerId = this.players[this.currentPlayerIndex];
+
         // Reset movement points for new player's units
         this.units
-            .filter(unit => unit.playerId === this.players[this.currentPlayerIndex])
+            .filter(unit => unit.playerId === currentPlayerId)
             .forEach(resetUnitMovement);
+
+        // If it's an AI's turn, let them play immediately
+        const aiPlayer = this.aiPlayers.get(currentPlayerId);
+        if (aiPlayer) {
+            aiPlayer.takeTurn(this);
+        }
     }
 
     private findPath(start: Position, destination: Position, maxMovement: number): Position[] | null {
