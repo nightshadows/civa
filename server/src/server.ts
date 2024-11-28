@@ -29,9 +29,9 @@ const wsToPlayer = new Map<WebSocket, string>(); // Track WebSocket -> playerId
 wss.on('connection', (ws) => {
   console.log('Client connected');
 
-  ws.on('message', (message) => {
+  ws.addEventListener('message', async (msg) => {
     try {
-      const data = JSON.parse(message.toString()) as GameMessage;
+      const data = JSON.parse(msg.data.toString()) as GameMessage;
       
       if (data.type === 'join_game' || data.type === 'list_games') {
         // Store both mappings on join
@@ -60,7 +60,7 @@ wss.on('connection', (ws) => {
     }
   });
 
-  ws.on('close', () => {
+  ws.addEventListener('close', () => {
     const playerId = wsToPlayer.get(ws);
     if (playerId) {
       console.log('Client disconnected:', playerId);
