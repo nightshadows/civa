@@ -26,11 +26,15 @@ Prerequisites on Macos:
 
 Current deployment runs at: https://civa-5ls.pages.dev/
 
+To deploy you need to be logged in to wrangler cli:
+```
+npx wrangler login
+```
+
 ### Deploying worker server
 ```
 cd server
-npx wrangler login
-npx wrangler deploy
+npm run release:cloudflare
 ```
 
 To debug worker server:
@@ -46,7 +50,5 @@ curl https://game-server.bestander.workers.dev/reset
 ### Deploying client
 ```
 cd client
-npm run clean
-npm run build:prod
-npx wrangler pages deploy public
+npm run release:cloudflare
 ```
