@@ -1,0 +1,16 @@
+name = "game-server"
+main = "src/cloudflare-worker.ts"
+compatibility_date = "2024-01-01"
+workers_dev = true
+
+[durable_objects]
+bindings = [
+  { name = "GAME", class_name = "GameDO" }
+]
+
+[[migrations]]
+tag = "v1"
+new_classes = ["GameDO"]
+
+[observability.logs]
+enabled = true

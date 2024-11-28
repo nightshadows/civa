@@ -17,3 +17,20 @@ Prerequisites on Windows:
 ./client
    npm install
    npm run dev
+
+
+## Deploying to Cloudflare
+
+### Deploying worker server
+```
+cd server
+npx wrangler login
+npx wrangler deploy
+```
+
+### Deploying client
+```
+cd client
+npm run build:prod
+npx wrangler pages publish public
+```

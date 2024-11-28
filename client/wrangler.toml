@@ -1,0 +1,8 @@
+name = "game-client"
+type = "webpack"
+account_id = "cf80651756d420f137b99d49c0a2b37b"
+workers_dev = true
+
+[site]
+bucket = "./public"
+entry-point = "workers-site"

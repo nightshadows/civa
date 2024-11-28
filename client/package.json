@@ -5,7 +5,7 @@
     "prebuild": "cd ../shared && npm run build",
     "dev": "parcel src/index.html",
     "build": "parcel build src/index.html --dist-dir public",
-    "build:prod": "NODE_ENV=production parcel build src/index.html --dist-dir public --public-url ./",
+    "build:prod": "NODE_ENV=production parcel build src/index.html --dist-dir public --public-url ./ --no-source-maps",
     "clean": "rm -rf .parcel-cache public"
   },
   "dependencies": {
