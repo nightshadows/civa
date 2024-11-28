@@ -30,9 +30,15 @@ npx wrangler login
 npx wrangler deploy
 ```
 
+To debug worker server:
+```
+npm run dev:cloudflare
+```
+
 ### Deploying client
 ```
 cd client
+npm run clean
 npm run build:prod
-npx wrangler pages publish public
+npx wrangler pages deploy public
 ```

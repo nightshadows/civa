@@ -7,7 +7,8 @@
     "test:watch": "vitest",
     "start": "ts-node src/server.ts",
     "build": "tsc",
-    "dev": "ts-node-dev src/server.ts"
+    "dev": "ts-node-dev src/server.ts",
+    "dev:cloudflare": "npx wrangler dev  --port 3000"
   },
   "dependencies": {
     "@types/cors": "^2.8.17",

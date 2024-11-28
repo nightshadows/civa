@@ -41,8 +41,6 @@ const initializeGame = () => {
 
 // Handle game list and joining
 gameEvents.on('gamesList', ({ games }) => {
-    console.log('Available games:', games);
-    
     if (games && games.length > 0) {
         // Join the first available game
         const gameId = games[0];
@@ -131,7 +129,8 @@ const gameActions: GameActions = {
     listGames: () => {
         console.info('Listing available games');
         socket.send(JSON.stringify({
-            type: 'list_games'
+            type: 'list_games',
+            playerId: playerId
         }));
     }
 };

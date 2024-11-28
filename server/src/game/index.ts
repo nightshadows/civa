@@ -473,4 +473,8 @@ export class Game {
         game.turnNumber = data.turnNumber;
         return game;
     }
+
+    public hasPlayer(playerId: string): boolean {
+        return this.players.includes(playerId);
+    }
 }
