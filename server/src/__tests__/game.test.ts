@@ -101,7 +101,7 @@ describe('Game', () => {
 
     describe('Unit Management', () => {
         test('should not spawn units in the same position', () => {
-            game.addPlayer(player2Id);
+            game.addPlayer({id: player2Id, type: PlayerType.HUMAN});
             const state = game.getVisibleState(player1Id);
             const positions = new Set(
                 state.visibleUnits.map(u => `${u.position.x},${u.position.y}`)
