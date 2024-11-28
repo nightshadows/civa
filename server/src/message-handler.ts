@@ -1,11 +1,14 @@
 import { Game } from "./game";
 import { PlayerType, PlayerConfig } from "./game/player-types";
+import { CombatResult, AttackUnitPayload } from "../../shared/src/types";
 
 export type GameAction = {
-  type: 'MOVE_UNIT' | 'END_TURN';
+  type: 'MOVE_UNIT' | 'END_TURN' | 'ATTACK_UNIT';
   payload?: {
     unitId?: string;
     destination?: any;  // Replace 'any' with your actual destination type
+    attackerId?: string;
+    defenderId?: string;
   };
 };
 
@@ -41,30 +44,33 @@ export function createGamesListMessage(games: string[]): GameMessage {
 }
 
 export function handleGameAction(
-  game: any,  // Replace 'any' with your Game type
+  game: Game,
   playerId: string,
   action: GameAction
-): { success: boolean; error?: string } {
-  console.log('Handling action:', action, 'for player:', playerId);
+): { success: boolean; error?: string; result?: CombatResult } {
   if (!game.isPlayerTurn(playerId)) {
     return { success: false, error: 'Not your turn' };
   }
 
-  if (action.type === 'MOVE_UNIT' && action.payload) {
-    const success = game.moveUnit(
-      action.payload.unitId,
-      action.payload.destination
-    );
-    return {
-      success,
-      error: success ? undefined : 'Invalid move'
-    };
-  } else if (action.type === 'END_TURN') {
-    game.endTurn();
-    return { success: true };
+  switch (action.type) {
+    case 'MOVE_UNIT':
+      if (!action.payload?.unitId || !action.payload.destination) {
+        return { success: false, error: 'Invalid payload' };
+      }
+      return game.moveUnit(action.payload.unitId, action.payload.destination);
+      
+    case 'ATTACK_UNIT':
+      if (!action.payload) return { success: false, error: 'Invalid payload' };
+      const attackPayload = action.payload as AttackUnitPayload;
+      return game.attackUnit(attackPayload.attackerId, attackPayload.defenderId);
+      
+    case 'END_TURN':
+      game.endTurn();
+      return { success: true };
+      
+    default:
+      return { success: false, error: 'Invalid action type' };
   }
-
-  return { success: false, error: 'Invalid action type' };
 }
 
 export interface GameWebSocket {

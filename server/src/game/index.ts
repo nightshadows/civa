@@ -1,8 +1,9 @@
 import { TileType, Position, Unit, GameState, UnitType, Tile } from '../../../shared/src/types';
-import { getStartingUnits, createUnit, resetUnitMovement } from './units';
+import { getStartingUnits, createUnit, resetUnitMovement, canUnitAttack, calculateCombat } from './units';
 import { getMovementCost } from '../../../shared/src/terrain';
 import { AIPlayer } from './ai-player';
 import { PlayerConfig, PlayerType } from './player-types';
+import { CombatResult } from '../../../shared/src/types';
 
 export class Game {
     public map: TileType[][];
@@ -515,5 +516,56 @@ export class Game {
 
     public hasPlayer(playerId: string): boolean {
         return this.players.includes(playerId);
+    }
+
+    public attackUnit(attackerId: string, defenderId: string): { success: boolean; error?: string; result?: CombatResult } {
+        const attacker = this.findUnit(attackerId);
+        const defender = this.findUnit(defenderId);
+
+        if (!attacker || !defender) {
+            return { success: false, error: 'Unit not found' };
+        }
+
+        if (this.isPlayerTurn(attacker.playerId)) {
+            return { success: false, error: 'Not your turn' };
+        }
+
+        if (attacker.playerId === defender.playerId) {
+            return { success: false, error: 'Cannot attack your own units' };
+        }
+
+        if (!canUnitAttack(attacker, defender)) {
+            return { success: false, error: 'Target not in range' };
+        }
+
+        const result = calculateCombat(attacker, defender);
+
+        // Apply damage
+        defender.currentHp -= result.defenderDamage;
+        attacker.currentHp -= result.attackerDamage;
+
+        // Remove dead units
+        if (result.defenderDied) {
+            this.removeUnit(defenderId);
+        }
+        if (result.attackerDied) {
+            this.removeUnit(attackerId);
+        }
+
+        // Attacking ends the unit's turn
+        attacker.movementPoints = 0;
+
+        return { success: true, result };
+    }
+
+    private removeUnit(unitId: string): void {
+        const unitIndex = this.units.findIndex(u => u.id === unitId);
+        if (unitIndex !== -1) {
+            this.units.splice(unitIndex, 1);
+        }
+    }
+
+    private findUnit(unitId: string): Unit | undefined {
+        return this.units.find(u => u.id === unitId);
     }
 }

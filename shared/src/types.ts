@@ -47,11 +47,23 @@ export interface GameState {
 }
 
 export interface GameAction {
-    type: 'MOVE_UNIT' | 'END_TURN';
-    payload: MoveUnitPayload | null;
+    type: 'MOVE_UNIT' | 'END_TURN' | 'ATTACK_UNIT';
+    payload: MoveUnitPayload | AttackUnitPayload | null;
 }
 
 export interface MoveUnitPayload {
     unitId: string;
     destination: Position;
+}
+
+export interface AttackUnitPayload {
+    attackerId: string;
+    defenderId: string;
+}
+
+export interface CombatResult {
+    attackerDamage: number;
+    defenderDamage: number;
+    attackerDied: boolean;
+    defenderDied: boolean;
 }

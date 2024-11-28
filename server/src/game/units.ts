@@ -64,3 +64,45 @@ export function getStartingUnits(playerId: string, basePosition: Position): Unit
         })
     ];
 }
+
+export interface CombatResult {
+    attackerDamage: number;
+    defenderDamage: number;
+    attackerDied: boolean;
+    defenderDied: boolean;
+}
+
+export function calculateCombat(attacker: Unit, defender: Unit): CombatResult {
+    const attackPower = attacker.attack;
+    const defensePower = defender.defense;
+    
+    // Calculate damage
+    const defenderDamage = Math.max(0, attackPower - defensePower);
+    const attackerDamage = Math.max(0, Math.floor(defensePower / 2)); // Counterattack does half damage
+    
+    // Update HP and check for deaths
+    const defenderNewHp = defender.currentHp - defenderDamage;
+    const attackerNewHp = attacker.currentHp - attackerDamage;
+    
+    return {
+        attackerDamage,
+        defenderDamage,
+        attackerDied: attackerNewHp <= 0,
+        defenderDied: defenderNewHp <= 0
+    };
+}
+
+export function isAdjacent(pos1: Position, pos2: Position): boolean {
+    // Check if two positions are adjacent
+    const dx = Math.abs(pos1.x - pos2.x);
+    const dy = Math.abs(pos1.y - pos2.y);
+    return (dx === 1 && dy === 0) || (dx === 0 && dy === 1);
+}
+
+export function canUnitAttack(unit: Unit, target: Unit): boolean {
+    // For now, only warriors can attack
+    if (unit.type !== UnitType.WARRIOR) return false;
+    
+    // Check if units are adjacent
+    return isAdjacent(unit.position, target.position);
+}
