@@ -306,9 +306,15 @@ export class Game {
             return { success: false, error: 'Destination occupied' };
         }
 
-        // Calculate movement cost for single tile movement
-        const movementCost = getMovementCost(this.map[destination.y][destination.x]) || 1;
-        
+        // Find path considering terrain costs
+        const path = this.findPath(unit.position, destination, unit.movementPoints);
+        if (!path) return { success: false, error: 'No valid path' };
+        // Calculate total movement cost along the path
+        const movementCost = path.reduce((cost, pos) => {
+            const terrainCost = getMovementCost(this.map[pos.y][pos.x]);
+            return cost + (terrainCost || 0);
+        }, 0);
+
         // Check if unit has enough movement points
         if (unit.movementPoints < movementCost) return { success: false, error: 'Insufficient movement points' };
 
