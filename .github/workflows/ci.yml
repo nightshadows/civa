@@ -21,6 +21,8 @@ on:
 jobs:
   test-and-build:
     runs-on: ubuntu-latest
+    outputs:
+      build_success: ${{ job.status == 'success' }}
 
     strategy:
       matrix:
