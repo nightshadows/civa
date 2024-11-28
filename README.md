@@ -21,6 +21,8 @@ Prerequisites on Windows:
 
 ## Deploying to Cloudflare
 
+Current deployment runs at: https://civa-5ls.pages.dev/
+
 ### Deploying worker server
 ```
 cd server
