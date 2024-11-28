@@ -1,3 +1,5 @@
+import { Game } from "./game";
+
 export type GameAction = {
   type: 'MOVE_UNIT' | 'END_TURN';
   payload?: {
@@ -85,4 +87,105 @@ export function broadcastGameState(
       ws.send(JSON.stringify(createGameStateMessage(playerState)));
     });
   }
+}
+
+export interface GameManager {
+  games: Map<string, Game>;
+  playerSessions: Map<string, string>;
+}
+
+export function handleJoinGame(
+  data: GameMessage,
+  ws: GameWebSocket,
+  sessions: Map<string, GameWebSocket> | Map<GameWebSocket, string>,
+  isClientToPlayer: boolean,
+  gameManager?: GameManager, // Optional: only needed for server.ts
+  game?: Game // Optional: only needed for worker.ts
+): { game: Game | null; error?: string } {
+  const gameId = data.gameId || 'default';
+  const playerId = data.playerId!;
+
+  if (isClientToPlayer) {
+    // Server.ts path
+    const { games, playerSessions } = gameManager!;
+    (sessions as Map<GameWebSocket, string>).set(ws, playerId);
+
+    if (!games.has(gameId)) {
+      games.set(gameId, new Game(12, [playerId], gameId));
+      playerSessions.set(playerId, gameId);
+    } else {
+      const game = games.get(gameId)!;
+      if (!playerSessions.has(playerId)) {
+        if (game.canAddPlayer()) {
+          game.addPlayer(playerId);
+          playerSessions.set(playerId, gameId);
+        } else {
+          return { game: null, error: 'Game is full' };
+        }
+      }
+    }
+    return { game: games.get(playerSessions.get(playerId)!)! };
+  } else {
+    // Worker.ts path
+    (sessions as Map<string, GameWebSocket>).set(playerId, ws);
+    
+    if (!game) {
+      game = new Game(12, [playerId], 'default');
+    } else if (game.canAddPlayer()) {
+      game.addPlayer(playerId);
+    } else {
+      return { game: null, error: 'Game is full' };
+    }
+    return { game };
+  }
+}
+
+export function handleGameMessage(
+  data: GameMessage,
+  ws: GameWebSocket,
+  sessions: Map<string, GameWebSocket> | Map<GameWebSocket, string>,
+  isClientToPlayer: boolean,
+  gameManager?: GameManager,
+  game?: Game
+): void {
+  switch (data.type) {
+    case 'join_game': {
+      const result = handleJoinGame(data, ws, sessions, isClientToPlayer, gameManager, game);
+      if (result.error) {
+        ws.send(JSON.stringify(createErrorMessage(result.error)));
+        return;
+      }
+      if (result.game) {
+        broadcastGameState(result.game, sessions, isClientToPlayer);
+      }
+      break;
+    }
+
+    case 'action': {
+      const playerId = isClientToPlayer 
+        ? (sessions as Map<GameWebSocket, string>).get(ws)
+        : getPlayerIdFromWs(ws, sessions as Map<string, GameWebSocket>);
+      
+      const currentGame = isClientToPlayer
+        ? gameManager!.games.get(gameManager!.playerSessions.get(playerId!)!)
+        : game;
+
+      if (!currentGame || !playerId) return;
+
+      const result = handleGameAction(currentGame, playerId, data.action!);
+      if (result.success) {
+        broadcastGameState(currentGame, sessions, isClientToPlayer);
+      } else {
+        ws.send(JSON.stringify(createErrorMessage(result.error!)));
+      }
+      break;
+    }
+  }
+}
+
+export function getPlayerIdFromWs(ws: GameWebSocket, sessions: Map<string, GameWebSocket>): string | null {
+  for (const [playerId, socket] of sessions.entries()) {
+    if (socket === ws) return playerId;
+  }
+  return null;
 }

@@ -1,7 +1,7 @@
 /// <reference types="@cloudflare/workers-types" />
 
 import { Game } from './game';
-import { GameMessage, GameAction, broadcastGameState, createErrorMessage, createGameStateMessage, handleGameAction } from './message-handler';
+import { GameMessage,  getPlayerIdFromWs,  handleGameMessage } from './message-handler';
 
 export interface Env {
   GAME: DurableObjectNamespace;
@@ -50,64 +50,16 @@ export class GameDO {
   private async handleWebSocket(ws: WebSocket) {
     ws.accept();
 
-    // Set up message handler
     ws.addEventListener('message', async (msg) => {
       const data = JSON.parse(msg.data as string) as GameMessage;
-      
-      switch (data.type) {
-        case 'join_game': {
-          const playerId = data.playerId!;
-          this.sessions.set(playerId, ws);
-
-          // Initialize game if not exists
-          if (!this.game) {
-            this.game = new Game(12, [playerId], 'default');
-          } else if (this.game.canAddPlayer()) {
-            this.game.addPlayer(playerId);
-          } else {
-            ws.send(JSON.stringify(createErrorMessage('Game is full')));
-            return;
-          }
-
-          // Broadcast state to all players
-          this.broadcastGameState();
-          break;
-        }
-
-        case 'action': {
-          if (!this.game) return;
-          const playerId = this.getPlayerIdFromWs(ws);
-          if (!playerId) return;
-
-          const result = handleGameAction(this.game, playerId, data.action!);
-          if (result.success) {
-            this.broadcastGameState();
-          } else {
-            ws.send(JSON.stringify(createErrorMessage(result.error!)));
-          }
-          break;
-        }
-      }
+      handleGameMessage(data, ws, this.sessions, false, undefined, this.game!);
     });
 
-    // Handle disconnection
     ws.addEventListener('close', () => {
-      const playerId = this.getPlayerIdFromWs(ws);
+      const playerId = getPlayerIdFromWs(ws, this.sessions);
       if (playerId) {
         this.sessions.delete(playerId);
       }
     });
-  }
-
-  private getPlayerIdFromWs(ws: WebSocket): string | null {
-    for (const [playerId, socket] of this.sessions.entries()) {
-      if (socket === ws) return playerId;
-    }
-    return null;
-  }
-
-  private broadcastGameState() {
-    if (!this.game) return;
-    broadcastGameState(this.game, this.sessions, false);
   }
 }
