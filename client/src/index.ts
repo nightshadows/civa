@@ -27,10 +27,33 @@ console.log('Connecting to', wsUrl);
 const socket = new WebSocket(wsUrl);
 const playerId = getOrCreatePlayerId();
 const gameEvents = new GameEventEmitter();
-const gameId = 'test-game';
 
-socket.addEventListener('open', () => {
-    console.log('Connected to server with playerId:', playerId);
+// Helper to generate a random gameId
+function generateGameId(): string {
+    return 'game-' + Math.random().toString(36).substring(2, 9);
+}
+
+// Modified game initialization
+const initializeGame = () => {
+    // Request list of available games first
+    gameActions.listGames();
+};
+
+// Handle game list and joining
+gameEvents.on('gamesList', ({ games }) => {
+    console.log('Available games:', games);
+    
+    if (games && games.length > 0) {
+        // Join the first available game
+        const gameId = games[0];
+        console.log('Joining existing game:', gameId);
+        gameActions.joinGame(gameId);
+    } else {
+        // Create a new game with generated ID
+        const newGameId = generateGameId();
+        console.log('Creating new game:', newGameId);
+        gameActions.joinGame(newGameId);
+    }
 });
 
 // Socket event handling
@@ -51,6 +74,11 @@ socket.addEventListener('message', (event) => {
         case 'error':
             console.error('Game error:', data.message);
             gameEvents.emit('gameError', { message: data.message });
+            break;
+
+        case 'games_list':
+            console.log('Available games:', data.games);
+            gameEvents.emit('gamesList', { games: data.games });
             break;
     }
 });// Create the event emitter
@@ -98,13 +126,20 @@ const gameActions: GameActions = {
             gameId,
             playerId
         }));
+    },
+
+    listGames: () => {
+        console.info('Listing available games');
+        socket.send(JSON.stringify({
+            type: 'list_games'
+        }));
     }
 };
 
 // Create game with engine choice based on URL parameter
 const game = GameSetup.createGame({
     playerId,
-    gameId,
+    gameId: '', // We'll set this after getting games list
     gameActions,
     gameEvents,
     width: 800,
@@ -112,12 +147,12 @@ const game = GameSetup.createGame({
     backgroundColor: '#1099bb',
 },
     () => {
-        // Join game when scene is ready
+        // Initialize game when scene is ready
         if (socket.readyState === WebSocket.OPEN) {
-            gameActions.joinGame(gameId)
+            initializeGame();
         } else {
             socket.addEventListener('open', () => {
-                gameActions.joinGame(gameId);
+                initializeGame();
             });
         }
     },

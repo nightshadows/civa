@@ -9,12 +9,13 @@ export type GameAction = {
 };
 
 export type GameMessage = {
-  type: 'join_game' | 'action' | 'game_state' | 'error';
+  type: 'join_game' | 'action' | 'game_state' | 'error' | 'list_games' | 'games_list';
   gameId?: string;
   playerId?: string;
   action?: GameAction;
   state?: any;  // Replace 'any' with your actual game state type
   message?: string;
+  games?: string[];  // Add this for the games list response
 };
 
 export function createErrorMessage(message: string): GameMessage {
@@ -140,6 +141,30 @@ export function handleJoinGame(
   }
 }
 
+export function createGamesListMessage(games: string[]): GameMessage {
+  return {
+    type: 'games_list',
+    games
+  };
+}
+
+export function getAvailableGames(
+  isClientToPlayer: boolean,
+  gameManager?: GameManager,
+  game?: Game
+): string[] {
+  if (isClientToPlayer && gameManager) {
+    // Server.ts: Return all games with available slots
+    return Array.from(gameManager.games.entries())
+      .filter(([_, game]) => game.canAddPlayer())
+      .map(([gameId]) => gameId);
+  } else if (!isClientToPlayer && game) {
+    // Worker.ts: Return current game if it has slots
+    return game.canAddPlayer() ? ['default'] : [];
+  }
+  return [];
+}
+
 export function handleGameMessage(
   data: GameMessage,
   ws: GameWebSocket,
@@ -178,6 +203,12 @@ export function handleGameMessage(
       } else {
         ws.send(JSON.stringify(createErrorMessage(result.error!)));
       }
+      break;
+    }
+
+    case 'list_games': {
+      const availableGames = getAvailableGames(isClientToPlayer, gameManager, game);
+      ws.send(JSON.stringify(createGamesListMessage(availableGames)));
       break;
     }
   }
