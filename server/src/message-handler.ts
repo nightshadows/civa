@@ -99,8 +99,18 @@ export function handleJoinGame(
   sessions: Map<string, GameWebSocket>,
   gameManager: GameManager
 ): { game: Game | null; error?: string } {
-  const gameId = data.gameId || 'default';
+  let gameId = data.gameId;
   const playerId = data.playerId!;
+
+  // If no gameId specified, get the last created game
+  if (!gameId) {
+    const gameIds = Array.from(gameManager.games.keys());
+    if (gameIds.length > 0) {
+      gameId = gameIds[gameIds.length - 1];
+    } else {
+      gameId = 'default';
+    }
+  }
 
   // Update session
   sessions.set(playerId, ws);

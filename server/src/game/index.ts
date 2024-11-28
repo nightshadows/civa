@@ -479,10 +479,15 @@ export class Game {
     }
 
     public toJSON() {
+        const playerConfigs = this.players.map(playerId => ({
+            id: playerId,
+            type: this.aiPlayers.has(playerId) ? PlayerType.AI : PlayerType.HUMAN
+        }));
+
         return {
             map: this.map,
             units: this.units,
-            players: this.players,
+            players: playerConfigs,
             currentPlayerIndex: this.currentPlayerIndex,
             mapSize: this.mapSize,
             turnNumber: this.turnNumber,
@@ -491,9 +496,14 @@ export class Game {
     }
 
     public static fromJSON(data: any): Game {
+        const playerConfigs = data.players.map((player: any) => ({
+            id: player.id || player, // Handle both new and old format
+            type: player.type || PlayerType.HUMAN // Default to HUMAN for old format
+        }));
+
         const game = new Game(
             data.mapSize,
-            data.players,
+            playerConfigs,
             data.gameId,
             data.map
         );

@@ -84,7 +84,7 @@ export class GameDO {
     ws.addEventListener('message', async (msg) => {
       try {
         const data = JSON.parse(msg.data as string) as GameMessage;
-        
+
         if (data.type === 'join_game' || data.type === 'list_games') {
           this.sessions.set(data.playerId!, ws);
           this.wsToPlayer.set(ws, data.playerId!);
@@ -103,7 +103,7 @@ export class GameDO {
         };
 
         const result = handleGameMessage(messageWithPlayer, ws, this.sessions, this.gameManager);
-        
+
         if (result.game) {
           await this.state.storage.put(`game:${result.game.gameId}`, result.game.toJSON());
           this.gameManager.games.set(result.game.gameId, result.game);

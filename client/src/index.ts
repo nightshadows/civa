@@ -42,8 +42,8 @@ const initializeGame = () => {
 // Handle game list and joining
 gameEvents.on('gamesList', ({ games }) => {
     if (games && games.length > 0) {
-        // Join the first available game
-        const gameId = games[0];
+        // Join the last played game
+        const gameId = games[games.length - 1];
         console.log('Joining existing game:', gameId);
         gameActions.joinGame(gameId);
     } else {
