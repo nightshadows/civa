@@ -1,4 +1,5 @@
 import { GameSetup, GameActions, GameEventEmitter } from './engine-setup';
+import { config } from './config';
 
 // Check URL for 3D parameter
 const use3D = new URLSearchParams(window.location.search).has('3d');
@@ -20,8 +21,8 @@ const getOrCreatePlayerId = (): string => {
     return newId;
 };
 
-const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-const wsUrl = `${wsProtocol}//${window.location.hostname}:3000`;
+
+const wsUrl = config.wsUrl;
 console.log('Connecting to', wsUrl);
 const socket = new WebSocket(wsUrl);
 const playerId = getOrCreatePlayerId();
