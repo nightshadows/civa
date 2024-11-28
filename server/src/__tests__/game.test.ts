@@ -2,12 +2,14 @@ import { describe, test, expect, beforeEach } from 'vitest';
 import { Game } from '../game';
 import { GameState, Position, TileType, Unit } from '../../../shared/src/types';
 import { getMovementCost } from '../../../shared/src/terrain';
+import { PlayerType } from '../game/player-types';
 
 describe('Game', () => {
     const player1Id = 'player1';
     const player2Id = 'player2';
+    const player3Id = 'player3';
     const mapSize = 5;
-    
+
     // Simple fixed map for testing:
     // 0 = GRASS (passable)
     // 1 = FOREST (passable but costly)
@@ -19,7 +21,7 @@ describe('Game', () => {
         [0, 0, 0, 0, 0],
         [0, 9, 1, 2, 0],
         [0, 0, 0, 0, 0],
-    ].map(row => row.map(cell => 
+    ].map(row => row.map(cell =>
         cell === 0 ? TileType.GRASS :
         cell === 1 ? TileType.FOREST :
         cell === 2 ? TileType.HILLS :
@@ -27,9 +29,8 @@ describe('Game', () => {
     ));
 
     let game: Game;
-
     beforeEach(() => {
-        game = new Game(mapSize, [player1Id], 'test-game', fixedMap);
+        game = new Game(mapSize, [{id: player1Id, type: PlayerType.HUMAN}], 'test-game', fixedMap);
     });
 
     describe('Player Management', () => {
@@ -40,22 +41,26 @@ describe('Game', () => {
         });
 
         test('should handle second player correctly', () => {
-            game.addPlayer(player2Id);
+            game.addPlayer({id: player2Id, type: PlayerType.HUMAN});
             const state = game.getVisibleState(player2Id);
-            
+
             expect(game.canAddPlayer()).toBe(false);
             expect(state.players).toEqual([player1Id, player2Id]);
         });
 
+        test('should prevent adding same player twice', () => {
+            expect(game.addPlayer({id: player1Id, type: PlayerType.HUMAN})).toBe(false);
+        });
+
         test('should prevent adding third player', () => {
-            game.addPlayer(player2Id);
-            expect(() => game.addPlayer('player3')).toThrow('Game is full');
+            game.addPlayer({id: player2Id, type: PlayerType.HUMAN});
+            expect(game.addPlayer({id: player3Id, type: PlayerType.HUMAN})).toBe(false);
         });
     });
 
     describe('Turn Management', () => {
         beforeEach(() => {
-            game.addPlayer(player2Id);
+            game.addPlayer({id: player2Id, type: PlayerType.HUMAN});
         });
 
         test('should start with player1 turn', () => {
@@ -133,7 +138,7 @@ describe('Game', () => {
 
             // Find an impassable tile adjacent to the unit
             const impassableTile = game.getNeighbors(unit.position).find(pos => {
-                if (pos.x < 0 || pos.x >= game.map[0].length || 
+                if (pos.x < 0 || pos.x >= game.map[0].length ||
                     pos.y < 0 || pos.y >= game.map.length) {
                     return false;
                 }
@@ -157,13 +162,13 @@ describe('Game', () => {
 function findValidMove(game: Game, unit: Unit): Position | undefined {
     return game.getHexesInRange(unit.position, 1).find(pos => {
         // Check if position is within map bounds
-        if (pos.x < 0 || pos.x >= game.map[0].length || 
+        if (pos.x < 0 || pos.x >= game.map[0].length ||
             pos.y < 0 || pos.y >= game.map.length) {
             return false;
         }
-        
+
         const isPassable = getMovementCost(game.map[pos.y][pos.x]) !== null;
         const isOccupied = game.units.some(u => u.position.x === pos.x && u.position.y === pos.y);
         return isPassable && !isOccupied;
     });
-} 
+}
