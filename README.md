@@ -7,15 +7,18 @@ Prerequisites on Windows:
  winget install -e --id OpenJS.NodeJS
  Set-ExecutionPolicy -Scope CurrentUser Unrestricted
 
-./shared
-   npm install
-   npm run build
+
+Prerequisites on Macos:
+ /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+ brew install node; brew install npm
+
 ./server
    npm install
    npm run start
 
 ./client
    npm install
+   npm run build
    npm run dev
 
 
