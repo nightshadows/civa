@@ -3,12 +3,13 @@ import { GameScene as PhaserGameScene } from './phaser/game-scene';
 import { BabylonGameScene } from './babylon/babylon-game-scene';
 import { GameState, Position } from '@shared/types';
 export interface GameActions {
-    moveUnit: (unitId: string, destination: any) => void;
+    moveUnit: (unitId: string, destination: Position) => void;
     fortifyUnit: (unitId: string) => void;
     endTurn: () => void;
     joinGame: (gameId: string) => void;
     listGames: () => void;
     createGame: (gameId: string) => void;
+    attackUnit: (attackerId: string, defenderId: string) => void;
 }
 
 export type GameEvents = {

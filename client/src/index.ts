@@ -141,7 +141,18 @@ const gameActions: GameActions = {
             gameId,
             playerId
         }));
-    }
+    },
+
+    attackUnit: (attackerId, defenderId) => {
+        console.info('Attacking unit', defenderId, 'with unit', attackerId);
+        socket.send(JSON.stringify({
+            type: 'action',
+            action: {
+                type: 'ATTACK_UNIT',
+                payload: { attackerId, defenderId }
+            }
+        }));
+    },
 };
 
 // Create game with engine choice based on URL parameter

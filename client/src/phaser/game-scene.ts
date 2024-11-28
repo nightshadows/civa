@@ -402,6 +402,7 @@ export class GameScene extends Phaser.Scene {
 
         if (clickedUnit) {
             if (clickedUnit.playerId === this.playerId) {
+                // Handle selecting own unit
                 if (this.selectedUnit === clickedUnit) {
                     this.clearSelection();
                 } else {
@@ -409,9 +410,22 @@ export class GameScene extends Phaser.Scene {
                     this.highlightSelectedUnit(clickedUnit);
                     this.showMovementRange(clickedUnit);
                 }
+            } else if (this.selectedUnit && this.selectedUnit.movementPoints > 0) {
+                // Handle attacking enemy unit
+                const isAdjacent = this.hexGrid.getHexesInRange(
+                    this.selectedUnit.position,
+                    1,
+                    { width: gameState.mapSize, height: gameState.mapSize },
+                    mapData
+                ).some(hex => hex.x === clickedUnit.position.x && hex.y === clickedUnit.position.y);
+
+                if (isAdjacent && this.selectedUnit.type === UnitType.WARRIOR) {
+                    this.gameActions.attackUnit(this.selectedUnit.id, clickedUnit.id);
+                    this.clearSelection();
+                }
             }
         } else if (this.selectedUnit) {
-            // Check if the clicked hex is within movement range
+            // Handle moving unit
             const movementHexes = this.hexGrid.getHexesInRange(
                 this.selectedUnit.position,
                 this.selectedUnit.movementPoints,
