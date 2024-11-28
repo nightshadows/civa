@@ -35,6 +35,11 @@ To debug worker server:
 npm run dev:cloudflare
 ```
 
+To reset worker server:
+```
+curl https://game-server.bestander.workers.dev/reset
+```
+
 ### Deploying client
 ```
 cd client
