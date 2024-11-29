@@ -48,11 +48,12 @@ export interface GameState {
 }
 
 export interface GameAction {
-    type: 'MOVE_UNIT' | 'END_TURN' | 'FORTIFY_UNIT';
+    type: 'MOVE_UNIT' | 'END_TURN' | 'FORTIFY_UNIT' | 'ATTACK_UNIT';
     playerId: string;
     timestamp: number;
     payload?: {
         unitId?: string;
+        targetId?: string;
         from?: Position;
         to?: Position;
     };

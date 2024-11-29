@@ -541,4 +541,64 @@ export class Game {
         };
         this.moveHistory.push(historyItem);
     }
+
+    public attackUnit(attackerId: string, targetId: string): { success: boolean; error?: string } {
+        const attacker = this.units.find(u => u.id === attackerId);
+        const target = this.units.find(u => u.id === targetId);
+
+        if (!attacker || !target) {
+            return { success: false, error: 'Unit not found' };
+        }
+
+        if (!this.isPlayerTurn(attacker.playerId)) {
+            return { success: false, error: 'Not player turn' };
+        }
+
+        if (attacker.movementPoints <= 0) {
+            return { success: false, error: 'No movement points' };
+        }
+
+        if (attacker.playerId === target.playerId) {
+            return { success: false, error: 'Cannot attack own unit' };
+        }
+
+        // Check if units are adjacent for melee attack
+        if (!this.areUnitsAdjacent(attacker.position, target.position)) {
+            return { success: false, error: 'Target not in range' };
+        }
+
+        // Calculate and apply damage
+        const damageToTarget = attacker.attack;
+        const counterDamage = target.defense;
+
+        target.currentHp = Math.max(0, target.currentHp - damageToTarget);
+        attacker.currentHp = Math.max(0, attacker.currentHp - counterDamage);
+
+        // Consume movement points
+        attacker.movementPoints = 0;
+
+        // Add to history
+        this.addToHistory({
+            type: 'ATTACK_UNIT',
+            playerId: attacker.playerId,
+            payload: {
+                unitId: attackerId,
+                targetId: targetId
+            }
+        });
+
+        // Remove dead units
+        this.removeDeadUnits();
+
+        return { success: true };
+    }
+
+    private areUnitsAdjacent(pos1: Position, pos2: Position): boolean {
+        const neighbors = this.getNeighbors(pos1);
+        return neighbors.some(n => n.x === pos2.x && n.y === pos2.y);
+    }
+
+    private removeDeadUnits(): void {
+        this.units = this.units.filter(unit => unit.currentHp > 0);
+    }
 }
