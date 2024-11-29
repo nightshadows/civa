@@ -1,4 +1,4 @@
-name: Deploy to Cloudflare Workers
+name: Deploy to Cloudflare Workers/Pages
 
 on:
   workflow_run:
@@ -27,6 +27,7 @@ jobs:
       - name: Install Dependencies
         run: |
           cd ../shared && npm install && npm run build
+          cd ../cient && npm install
           cd ../server && npm install
 
       - name: Deploy to Cloudflare Workers
@@ -34,3 +35,9 @@ jobs:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
         run: npm run release:cloudflare
+
+      - name: Deploy to Cloudflare Pages
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: cd ../client && npm run release:cloudflare
