@@ -12,6 +12,9 @@ jobs:
   deploy:
     runs-on: ubuntu-latest
     if: ${{ github.event.workflow_run.conclusion == 'success' }}
+    defaults:
+      run:
+        working-directory: ./server
 
     steps:
       - uses: actions/checkout@v4
@@ -22,10 +25,12 @@ jobs:
           node-version: '18'
 
       - name: Install Dependencies
-        run: cd ./server && npm install
+        run: |
+          cd ../shared && npm install && npm run build
+          cd ../server && npm install
 
       - name: Deploy to Cloudflare Workers
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-        run: cd ./server && npm run release:cloudflare
+        run: npm run release:cloudflare
