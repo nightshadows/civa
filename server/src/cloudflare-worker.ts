@@ -1,159 +1,105 @@
 /// <reference types="@cloudflare/workers-types" />
 
-import { Game } from './game';
 import {
-  createErrorMessage,
-  createGamesListMessage,
-  GameManager,
   GameMessage,
-  getPlayerIdFromWs,
-  handleGameMessage,
-  getAvailableGames
 } from './message-handler';
+import { GameServerBase, GameStorage } from './game-server-base';
 
 export interface Env {
   GAME: DurableObjectNamespace;
 }
 
+export class CloudflareStorage implements GameStorage {
+  constructor(private storage: DurableObjectStorage) {}
+
+  async put(key: string, value: any): Promise<void> {
+      await this.storage.put(key, value);
+  }
+
+  async delete(key: string): Promise<void> {
+      await this.storage.delete(key);
+  }
+  async list(options: { prefix: string }): Promise<Map<string, any>> {
+      return await this.storage.list({ prefix: options.prefix });
+  }
+}
+
+export { CloudflareGameServer as GameDO }
+
 export default {
   async fetch(request: Request, env: Env): Promise<Response> {
     const url = new URL(request.url);
-    const gameId = url.searchParams.get('gameId') || 'default';
-
-    // Get DO instance for this game
-    const gameObjectId = env.GAME.idFromName(gameId);
+    const gameObjectId = env.GAME.idFromName('default');
     const gameObject = env.GAME.get(gameObjectId);
-    console.log('fetch gameObject', gameObject);
-
-    // Forward request to DO
+    
+    // Forward all requests to the Durable Object
     return gameObject.fetch(request);
   }
 };
 
-// Durable Object definition
-export class GameDO {
-  private state: DurableObjectState;
-  private gameManager: GameManager = {
-    games: new Map<string, Game>(),
-    playerSessions: new Map<string, string>()
-  };
-  private sessions = new Map<string, WebSocket>();
-  private wsToPlayer = new Map<WebSocket, string>();
-  private initialized: Promise<void>;
-
-  constructor(state: DurableObjectState) {
-    this.state = state;
-    this.initialized = this.initGameManager();
-  }
-
-  private async initGameManager() {
-    try {
-      // List all stored games
-      const games = await this.state.storage.list({ prefix: 'game:' });
-      for (const [key, value] of games) {
-        const storedGame = Game.fromJSON(value);
-        this.gameManager.games.set(storedGame.gameId, storedGame);
-      }
-      console.log('Loaded games:', Array.from(this.gameManager.games.keys()));
-    } catch (error) {
-      console.error('Error initializing game manager:', error);
+export class CloudflareGameServer extends GameServerBase {
+    constructor(private state: DurableObjectState) {
+      const storage = new CloudflareStorage(state.storage);
+        super(storage);
     }
-  }
 
-  private async handleWebSocket(ws: WebSocket) {
-    ws.accept();
+    async fetch(request: Request): Promise<Response> {
+        await this.initialized;
 
-    ws.addEventListener('message', async (msg) => {
-      try {
-        const data = JSON.parse(msg.data as string) as GameMessage;
-
-        if (data.type === 'join_game' || data.type === 'list_games') {
-          this.sessions.set(data.playerId!, ws);
-          this.wsToPlayer.set(ws, data.playerId!);
-          console.log('Player joined:', data.playerId);
+        if (request.method === 'OPTIONS') {
+            return new Response(null, { headers: this.corsHeaders });
         }
 
-        const playerId = this.wsToPlayer.get(ws);
-        if (!playerId && data.type !== 'join_game') {
-          ws.send(JSON.stringify(createErrorMessage('Not authenticated')));
-          return;
-        }
+        const url = new URL(request.url);
+        const parts = url.pathname.split('/').filter(Boolean);
 
-        const messageWithPlayer: GameMessage = {
-          ...data,
-          playerId: playerId || data.playerId
-        };
-
-        const result = handleGameMessage(messageWithPlayer, ws, this.sessions, this.gameManager);
-
-        if (result.game) {
-          await this.state.storage.put(`game:${result.game.gameId}`, result.game.toJSON());
-          this.gameManager.games.set(result.game.gameId, result.game);
-          console.log('Saved game state:', result.game.gameId);
-        }
-
-        // Handle game deletion in Durable Object storage
-        if (data.type === 'delete_game' && !result.error) {
-          await this.state.storage.delete(`game:${data.gameId}`);
-          console.log('Deleted game from storage:', data.gameId);
-
-          // Get the complete list of games after deletion
-          const allGames = await this.state.storage.list({ prefix: 'game:' });
-          // Sync memory state with storage
-          this.gameManager.games.clear();
-          for (const [key, value] of allGames) {
-            const storedGame = Game.fromJSON(value);
-            this.gameManager.games.set(storedGame.gameId, storedGame);
-          }
-
-          // Now get available games and broadcast
-          const availableGames = getAvailableGames(this.gameManager);
-          console.log('Broadcasting updated games list:', availableGames);
-          this.sessions.forEach((clientWs) => {
-            if (clientWs.readyState === 1) {
-              clientWs.send(JSON.stringify(createGamesListMessage(availableGames)));
+        // Handle REST API endpoints
+        if (parts[0] === 'api') {
+            const body = request.method !== 'GET' ? await request.json() : undefined;
+            const result = await this.handleRestRequest(request.method, parts, body);
+            if (result) {
+                return new Response(JSON.stringify(result), {
+                    headers: {
+                        'Content-Type': 'application/json',
+                        ...this.corsHeaders
+                    }
+                });
             }
-          });
+            return new Response('Not Found', { status: 404 });
         }
-      } catch (error) {
-        console.error('Error handling message:', error);
-        ws.send(JSON.stringify(createErrorMessage('Internal server error')));
-      }
-    });
 
-    ws.addEventListener('close', () => {
-      const playerId = this.wsToPlayer.get(ws);
-      if (playerId) {
-        console.log('Client disconnected:', playerId);
-        this.sessions.delete(playerId);
+        // Handle WebSocket
+        if (request.headers.get('Upgrade') === 'websocket') {
+            const { 0: client, 1: server } = new WebSocketPair();
+            server.accept();
+            
+            server.addEventListener('message', async (msg) => {
+                const data = JSON.parse(msg.data as string) as GameMessage;
+                await this.handleWebSocketMessage(server, data);
+            });
+
+            server.addEventListener('close', () => {
+                this.handleWebSocketClose(server);
+            });
+
+            return new Response(null, {
+                status: 101,
+                webSocket: client,
+            });
+        }
+
+        return new Response('Not Found', { status: 404 });
+    }
+
+    protected setWebSocketPlayer(ws: WebSocket, playerId: string) {
+        this.wsToPlayer.set(ws, playerId);
+    }
+
+    protected getWebSocketPlayer(ws: WebSocket) {
+        return this.wsToPlayer.get(ws);
+    }
+
+    protected cleanupWebSocket(ws: WebSocket) {
         this.wsToPlayer.delete(ws);
-      }
-    });
-  }
-
-  async fetch(request: Request) {
-    await this.initialized;
-    const url = new URL(request.url);
-
-    if (url.pathname === '/reset') {
-      console.log('Clearing state for game:', url.searchParams.get('gameId'));
-      await this.state.storage.deleteAll();
-      this.gameManager.games.clear();
-      this.gameManager.playerSessions.clear();
-      this.sessions.clear();
-      this.wsToPlayer.clear();
-      return new Response('State cleared', { status: 200 });
     }
-
-    if (request.headers.get('Upgrade') === 'websocket') {
-      const { 0: client, 1: server } = new WebSocketPair();
-      await this.handleWebSocket(server);
-      return new Response(null, {
-        status: 101,
-        webSocket: client,
-      });
-    }
-
-    return new Response('Expected WebSocket', { status: 400 });
-  }
 }

@@ -1,47 +1,7 @@
 import Phaser from 'phaser';
 import { GameScene as PhaserGameScene } from './phaser/game-scene';
 import { BabylonGameScene } from './babylon/babylon-game-scene';
-import { Position, GameState } from '@shared/types';
-
-export interface GameActions {
-    moveUnit: (unitId: string, destination: Position) => void;
-    fortifyUnit: (unitId: string) => void;
-    attackUnit: (attackerId: string, targetId: string) => void;
-    endTurn: () => void;
-    joinGame: (gameId: string) => void;
-    listGames: () => void;
-    createGame: (gameId: string) => void;
-    deleteGame: (gameId: string) => void;
-}
-
-export type GameEvents = {
-    'updateGameState': GameState;
-    'gameJoined': { playerId: string };
-    'gameError': { message: string };
-    'gamesList': { games: string[] };
-}
-
-export class GameEventEmitter {
-    private listeners: {
-        [K in keyof GameEvents]?: Set<(data: GameEvents[K]) => void>;
-    } = {};
-
-    on<K extends keyof GameEvents>(event: K, callback: (data: GameEvents[K]) => void) {
-        if (!this.listeners[event]) {
-            // @ts-ignore typescript can't coerce the type of the key
-            this.listeners[event] = new Set();
-        }
-        this.listeners[event]!.add(callback);
-    }
-
-    off<K extends keyof GameEvents>(event: K, callback: (data: GameEvents[K]) => void) {
-        this.listeners[event]?.delete(callback);
-    }
-
-    emit<K extends keyof GameEvents>(event: K, data: GameEvents[K]) {
-        this.listeners[event]?.forEach(callback => callback(data));
-    }
-}
+import { GameActions, GameEventEmitter } from './game';
 
 export interface GameSetupConfig {
     playerId: string;
