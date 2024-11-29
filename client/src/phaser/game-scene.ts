@@ -409,6 +409,11 @@ export class GameScene extends Phaser.Scene {
                     this.highlightSelectedUnit(clickedUnit);
                     this.showMovementRange(clickedUnit);
                 }
+            } else if (this.selectedUnit) {
+                if (this.areUnitsAdjacent(this.selectedUnit.position, clickedUnit.position)) {
+                    this.gameActions!.attackUnit(this.selectedUnit.id, clickedUnit.id);
+                    this.clearSelection();
+                }
             }
         } else if (this.selectedUnit) {
             // Check if the clicked hex is within movement range
@@ -499,5 +504,10 @@ export class GameScene extends Phaser.Scene {
         this.load.image('forest', 'assets/terrain/forest.png');
         this.load.image('hills', 'assets/terrain/hills.png');
         this.load.image('water', 'assets/terrain/water.png');
+    }
+
+    private areUnitsAdjacent(pos1: Position, pos2: Position): boolean {
+        const neighbors = this.hexGrid.getNeighbors(pos1);
+        return neighbors.some(n => n.x === pos2.x && n.y === pos2.y);
     }
 }

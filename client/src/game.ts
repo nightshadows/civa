@@ -99,7 +99,20 @@ const gameActions: GameActions = {
             gameId,
             playerId
         }));
-    }
+    },
+
+    attackUnit: (attackerId, targetId) => {
+        socket.send(JSON.stringify({
+            type: 'action',
+            action: {
+                type: 'ATTACK_UNIT',
+                payload: { 
+                    unitId: attackerId,
+                    targetId: targetId
+                }
+            }
+        }));
+    },
 };
 
 // Initialize game

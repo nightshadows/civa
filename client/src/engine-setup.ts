@@ -6,6 +6,7 @@ import { Position, GameState } from '@shared/types';
 export interface GameActions {
     moveUnit: (unitId: string, destination: Position) => void;
     fortifyUnit: (unitId: string) => void;
+    attackUnit: (attackerId: string, targetId: string) => void;
     endTurn: () => void;
     joinGame: (gameId: string) => void;
     listGames: () => void;
