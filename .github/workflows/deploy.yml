@@ -27,7 +27,7 @@ jobs:
       - name: Install Dependencies
         run: |
           cd ../shared && npm install && npm run build
-          cd ../cient && npm install
+          cd ../client && npm install
           cd ../server && npm install
 
       - name: Deploy to Cloudflare Workers

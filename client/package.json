@@ -6,24 +6,21 @@
     "dev": "parcel src/index.html src/game.html",
     "build": "parcel build src/index.html src/game.html --dist-dir public",
     "build:prod": "NODE_ENV=production parcel build src/index.html src/game.html --dist-dir public --public-url ./ --no-source-maps",
-    "release:cloudflare": "npm run clean && npm run build:prod && npx wrangler pages deploy public",
+    "release:cloudflare": "npm run clean && npm run build:prod ",
     "clean": "rm -rf .parcel-cache public"
   },
   "dependencies": {
-    "@babylonjs/core": "^7.35.1",
-    "@babylonjs/gui": "^7.35.1",
-    "@babylonjs/loaders": "^7.35.1",
-    "phaser": "^3.70.0"
+    "@babylonjs/core": "7.35.1",
+    "@babylonjs/gui": "7.35.1",
+    "@babylonjs/loaders": "7.35.1",
+    "phaser": "3.70.0"
   },
   "devDependencies": {
-    "@parcel/config-default": "^2.10.3",
-    "@parcel/core": "^2.10.3",
-    "@parcel/transformer-typescript-tsc": "^2.10.3",
-    "@parcel/transformer-typescript-types": "^2.10.3",
-    "parcel": "^2.10.3",
-    "parcel-reporter-static-files-copy": "^1.5.3",
-    "process": "^0.11.10",
-    "typescript": "^5.7.2"
+    "@parcel/config-default": "2.10.3",
+    "parcel": "2.10.3",
+    "parcel-reporter-static-files-copy": "1.5.3",
+    "process": "0.11.10",
+    "typescript": "5.7.2"
   },
   "staticFiles": {
     "staticPath": "public_assets",
