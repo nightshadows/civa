@@ -85,11 +85,34 @@ export function broadcastGameState(
   game: Game,
   sessions: Map<string, GameWebSocket>  // Always playerId -> WebSocket
 ) {
+  console.log(`[broadcastGameState] Starting broadcast for game ${game.gameId}`);
+  console.log(`[broadcastGameState] Total connected sessions: ${sessions.size}`);
+
+  let broadcastCount = 0;
+  let skippedCount = 0;
+
   sessions.forEach((ws, playerId) => {
     if (ws.readyState === 1) { // WebSocket.OPEN
       const playerState = game.getVisibleState(playerId);
+      console.log(`[broadcastGameState] Sending state to player ${playerId}:`, {
+        turnNumber: playerState.turnNumber,
+        currentPlayer: playerState.currentPlayerId,
+        visibleUnits: playerState.visibleUnits.length,
+        moveHistoryLength: playerState.moveHistory.length
+      });
+
       ws.send(JSON.stringify(createGameStateMessage(playerState)));
+      broadcastCount++;
+    } else {
+      console.log(`[broadcastGameState] Skipping player ${playerId} - socket not open (state: ${ws.readyState})`);
+      skippedCount++;
     }
+  });
+
+  console.log(`[broadcastGameState] Broadcast complete:`, {
+    successful: broadcastCount,
+    skipped: skippedCount,
+    total: sessions.size
   });
 }
 

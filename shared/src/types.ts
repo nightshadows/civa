@@ -57,8 +57,3 @@ export interface GameAction {
         to?: Position;
     };
 }
-
-export interface MoveUnitPayload {
-    unitId: string;
-    destination: Position;
-}
