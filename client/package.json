@@ -3,9 +3,9 @@
   "version": "1.0.0",
   "scripts": {
     "prebuild": "cd ../shared && npm run build",
-    "dev": "parcel src/index.html",
-    "build": "parcel build src/index.html --dist-dir public",
-    "build:prod": "NODE_ENV=production parcel build src/index.html --dist-dir public --public-url ./ --no-source-maps",
+    "dev": "parcel src/index.html src/game.html",
+    "build": "parcel build src/index.html src/game.html --dist-dir public",
+    "build:prod": "NODE_ENV=production parcel build src/index.html src/game.html --dist-dir public --public-url ./ --no-source-maps",
     "release:cloudflare": "npm run clean && npm run build:prod && npx wrangler pages deploy public",
     "clean": "rm -rf .parcel-cache public"
   },
