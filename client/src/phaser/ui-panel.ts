@@ -205,7 +205,7 @@ export class UIPanel {
     }
 
     public updateMoveHistory(history: GameAction[]): void {
-        const lastMoves = history.slice(-5).map(action => {
+        const lastMoves = history.slice(-5).reverse().map(action => {
             const time = new Date(action.timestamp).toLocaleTimeString();
             switch (action.type) {
                 case 'MOVE_UNIT':
