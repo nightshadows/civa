@@ -92,7 +92,7 @@ const gameActions: GameActions = {
             playerId
         }));
     }
-}; 
+};
 
 // Initialize game
 const game = GameSetup.createGame({

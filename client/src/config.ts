@@ -6,4 +6,4 @@ declare const process: {
 
 export const config = {
   wsUrl: process.env.WS_URL || 'ws://localhost:3000'
-}; 
+};
