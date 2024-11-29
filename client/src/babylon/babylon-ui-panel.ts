@@ -10,6 +10,7 @@ export class BabylonUIPanel {
     private fortifyButton!: Rectangle;
     private levelUpButton!: Rectangle;
     private endTurnButton!: Rectangle;
+    private menuButton!: Rectangle;
     private playerList!: TextBlock;
     private mainPanel!: StackPanel;
     private onEndTurn?: () => void;
@@ -106,12 +107,12 @@ export class BabylonUIPanel {
         this.endTurnButton.background = "#666666";
         this.endTurnButton.cornerRadius = 5;
         this.endTurnButton.thickness = 0;
-        
+
         const endTurnText = new TextBlock();
         endTurnText.text = "End Turn";
         endTurnText.color = "white";
         this.endTurnButton.addControl(endTurnText);
-        
+
         // Create Fortify button
         this.fortifyButton = new Rectangle("fortifyBtn");
         this.fortifyButton.width = "100px";
@@ -119,12 +120,12 @@ export class BabylonUIPanel {
         this.fortifyButton.background = "#666666";
         this.fortifyButton.cornerRadius = 5;
         this.fortifyButton.thickness = 0;
-        
+
         const fortifyText = new TextBlock();
         fortifyText.text = "Fortify";
         fortifyText.color = "white";
         this.fortifyButton.addControl(fortifyText);
-        
+
         // Create Level Up button
         this.levelUpButton = new Rectangle("levelUpBtn");
         this.levelUpButton.width = "100px";
@@ -132,17 +133,31 @@ export class BabylonUIPanel {
         this.levelUpButton.background = "#666666";
         this.levelUpButton.cornerRadius = 5;
         this.levelUpButton.thickness = 0;
-        
+
         const levelUpText = new TextBlock();
         levelUpText.text = "Level Up";
         levelUpText.color = "white";
         this.levelUpButton.addControl(levelUpText);
-        
+
+        // Create Menu button
+        this.menuButton = new Rectangle("menuBtn");
+        this.menuButton.width = "100px";
+        this.menuButton.height = "30px";
+        this.menuButton.background = "#666666";
+        this.menuButton.cornerRadius = 5;
+        this.menuButton.thickness = 0;
+
+        const menuText = new TextBlock();
+        menuText.text = "Menu";
+        menuText.color = "white";
+        this.menuButton.addControl(menuText);
+
         // Add buttons from left to right
         buttonContainer.addControl(this.fortifyButton);
         buttonContainer.addControl(this.levelUpButton);
         buttonContainer.addControl(this.endTurnButton);
-        
+        buttonContainer.addControl(this.menuButton);
+
         this.advancedTexture.addControl(buttonContainer);
     }
 
@@ -163,6 +178,10 @@ export class BabylonUIPanel {
             if (this.onLevelUpUnit) {
                 this.onLevelUpUnit();
             }
+        });
+
+        this.menuButton.onPointerClickObservable.add(() => {
+            window.location.href = '/?3d';
         });
     }
 
@@ -224,4 +243,4 @@ export class BabylonUIPanel {
 
         this.playerList.text = 'Players:\n' + players.join('\n');
     }
-} 
+}

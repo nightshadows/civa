@@ -14,8 +14,8 @@ export class UIPanel {
     private playerList!: Phaser.GameObjects.Text;
     private turnNumberText!: Phaser.GameObjects.Text;
     private height: number;
-    private newGameButton!: Phaser.GameObjects.Rectangle;
-    private newGameText!: Phaser.GameObjects.Text;
+    private menuButton!: Phaser.GameObjects.Rectangle;
+    private menuText!: Phaser.GameObjects.Text;
 
     constructor(scene: Phaser.Scene, height: number) {
         this.scene = scene;
@@ -117,11 +117,11 @@ export class UIPanel {
         .setOrigin(0.5)
         .setDepth(102);
 
-        // New Game button (positioned below End Turn button)
-        this.newGameButton = this.scene.add.rectangle(640, baseY + 40, 100, 30, 0x666666)
+        // Menu button (positioned below End Turn button)
+        this.menuButton = this.scene.add.rectangle(640, baseY + 40, 100, 30, 0x666666)
             .setInteractive()
             .setDepth(101);
-        this.newGameText = this.scene.add.text(640, baseY + 40, 'New Game', {
+        this.menuText = this.scene.add.text(640, baseY + 40, 'Menu', {
             color: '#ffffff',
             fontSize: '12px',
             fontFamily: 'Arial'
@@ -133,7 +133,7 @@ export class UIPanel {
         this.fortifyButton.on('pointerdown', () => this.onFortifyClick());
         this.levelUpButton.on('pointerdown', () => this.onLevelUpClick());
         this.endTurnButton.on('pointerdown', () => this.onEndTurnClick());
-        this.newGameButton.on('pointerdown', () => this.onNewGameClick());
+        this.menuButton.on('pointerdown', () => this.onMenuClick());
     }
 
     public updateUnitInfo(unit: Unit | null) {
@@ -181,8 +181,8 @@ export class UIPanel {
         this.scene.events.emit('end_turn');
     }
 
-    private onNewGameClick() {
-        this.scene.events.emit('new_game');
+    private onMenuClick() {
+        window.location.href = '/';
     }
 
     public updatePlayerList(gameState: GameState) {
