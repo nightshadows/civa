@@ -47,6 +47,8 @@ export class Game {
             return false;
         }
         this.players.push(player.id);
+        const playerUnits = this.initializeUnitsForPlayer(player.id, this.players.length - 1);
+        this.units.push(...playerUnits);
 
         // Initialize AI if needed
         if (player.type === PlayerType.AI) {
