@@ -1,6 +1,8 @@
-import { GameSetup, GameActions, GameEventEmitter } from './engine-setup';
+import { GameSetup } from './engine-setup';
 import { config } from './config';
 import { getOrCreatePlayerId } from './utils';
+import { Position } from '@shared/types';
+import { GameState } from '@shared/types';
 
 // Check URL for 3D parameter and gameId
 const urlParams = new URLSearchParams(window.location.search);
@@ -9,6 +11,43 @@ const gameId = urlParams.get('gameId');
 
 if (!gameId) {
     window.location.href = '/'; // Redirect to landing page if no gameId
+}
+
+export interface GameActions {
+    attackUnit: (attackerId: string, targetId: string) => void;
+    joinGame: () => void;
+    moveUnit: (unitId: string, destination: Position) => void;
+    fortifyUnit: (unitId: string) => void;
+    endTurn: () => void;
+}
+
+export type GameEvents = {
+    'updateGameState': GameState;
+    'gameJoined': { playerId: string };
+    'gameError': { message: string };
+    'gamesList': { games: string[] };
+}
+
+export class GameEventEmitter {
+    private listeners: {
+        [K in keyof GameEvents]?: Set<(data: GameEvents[K]) => void>;
+    } = {};
+
+    on<K extends keyof GameEvents>(event: K, callback: (data: GameEvents[K]) => void) {
+        if (!this.listeners[event]) {
+            // @ts-ignore typescript can't coerce the type of the key
+            this.listeners[event] = new Set();
+        }
+        this.listeners[event]!.add(callback);
+    }
+
+    off<K extends keyof GameEvents>(event: K, callback: (data: GameEvents[K]) => void) {
+        this.listeners[event]?.delete(callback);
+    }
+
+    emit<K extends keyof GameEvents>(event: K, data: GameEvents[K]) {
+        this.listeners[event]?.forEach(callback => callback(data));
+    }
 }
 
 const wsUrl = config.wsUrl;
@@ -70,32 +109,9 @@ const gameActions: GameActions = {
         }));
     },
 
-    joinGame: (gameId) => {
+    joinGame: () => {
         socket.send(JSON.stringify({
             type: 'join_game',
-            gameId,
-            playerId
-        }));
-    },
-
-    listGames: () => {
-        socket.send(JSON.stringify({
-            type: 'list_games',
-            playerId
-        }));
-    },
-
-    createGame: (gameId) => {
-        socket.send(JSON.stringify({
-            type: 'create_game',
-            gameId,
-            playerId
-        }));
-    },
-
-    deleteGame: (gameId) => {
-        socket.send(JSON.stringify({
-            type: 'delete_game',
             gameId,
             playerId
         }));
@@ -126,14 +142,7 @@ const game = GameSetup.createGame({
     backgroundColor: '#1099bb',
 },
 () => {
-    if (socket.readyState === WebSocket.OPEN) {
-    } else {
-        socket.addEventListener('open', () => {
-            gameActions.joinGame(gameId!);
-        });
-    }
-    if (socket.readyState === WebSocket.OPEN) {
-        gameActions.joinGame(gameId!);
-    }
+    console.log('Game initialized with ID:', gameId);
+    gameActions.joinGame();
 },
 use3D);

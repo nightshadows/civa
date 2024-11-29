@@ -534,6 +534,13 @@ export class Game {
         return this.players.includes(playerId);
     }
 
+    public getPlayers(): PlayerConfig[] {
+        return this.players.map(playerId => ({
+            id: playerId,
+            type: this.aiPlayers.has(playerId) ? PlayerType.AI : PlayerType.HUMAN
+        }));
+    }
+
     private addToHistory(action: Omit<GameAction, 'timestamp'>) {
         const historyItem: GameAction = {
             ...action,
