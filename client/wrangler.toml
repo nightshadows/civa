@@ -1,7 +1,11 @@
-name = "game-client"
+name = "civa"
 type = "webpack"
 account_id = "cf80651756d420f137b99d49c0a2b37b"
 workers_dev = true
+compatibility_date = "2024-01-01"
+
+# Specify the output directory for Pages
+pages_build_output_dir = "public"
 
 [site]
 bucket = "./public"
