@@ -1,4 +1,4 @@
-import { TileType, Position, Unit, GameState, UnitType, Tile } from '../../../shared/src/types';
+import { TileType, Position, Unit, GameState, UnitType, Tile, GameAction } from '../../../shared/src/types';
 import { getStartingUnits, createUnit, resetUnitMovement } from './units';
 import { getMovementCost } from '../../../shared/src/terrain';
 import { AIPlayer } from './ai-player';
@@ -14,6 +14,7 @@ export class Game {
     private _gameId: string;
     private turnNumber: number = 1;
     private aiPlayers: Map<string, AIPlayer> = new Map();
+    private moveHistory: GameAction[] = [];
 
     constructor(mapSize: number, players: PlayerConfig[], gameId: string, fixedMap?: TileType[][]) {
         this.mapSize = mapSize;
@@ -21,6 +22,7 @@ export class Game {
         this.currentPlayerIndex = 0;
         this.map = fixedMap || this.generateMap();
         this.units = [];
+        this.moveHistory = [];
 
         // Store player IDs
         this.players = players.map(p => p.id);
@@ -246,7 +248,8 @@ export class Game {
             visibleTiles,
             visibleUnits,
             mapSize: this.mapSize,
-            turnNumber: this.turnNumber
+            turnNumber: this.turnNumber,
+            moveHistory: this.moveHistory
         };
     }
 
@@ -255,13 +258,17 @@ export class Game {
     }
 
     public endTurn(): void {
+        const currentPlayerId = this.players[this.currentPlayerIndex];
+        this.addToHistory({
+            type: 'END_TURN',
+            playerId: currentPlayerId
+        });
+
         this.currentPlayerIndex = (this.currentPlayerIndex + 1) % this.players.length;
 
         if (this.currentPlayerIndex === 0) {
             this.turnNumber++;
         }
-
-        const currentPlayerId = this.players[this.currentPlayerIndex];
 
         // Reset movement points for new player's units
         this.units
@@ -332,6 +339,7 @@ export class Game {
         }
 
         // Find path considering terrain costs
+        const originalPosition = unit.position;
         const path = this.findPath(unit.position, destination, unit.movementPoints);
         if (!path) return { success: false, error: 'No valid path' };
         // Calculate total movement cost along the path
@@ -345,6 +353,11 @@ export class Game {
 
         unit.position = destination;
         unit.movementPoints -= movementCost;
+        this.addToHistory({
+            type: 'MOVE_UNIT',
+            playerId: unit.playerId,
+            payload: { unitId, from: originalPosition, to: destination }
+        });
         return { success: true };
     }
 
@@ -493,7 +506,8 @@ export class Game {
             currentPlayerIndex: this.currentPlayerIndex,
             mapSize: this.mapSize,
             turnNumber: this.turnNumber,
-            gameId: this._gameId
+            gameId: this._gameId,
+            moveHistory: this.moveHistory
         };
     }
 
@@ -512,10 +526,19 @@ export class Game {
         game.units = data.units;
         game.currentPlayerIndex = data.currentPlayerIndex;
         game.turnNumber = data.turnNumber;
+        game.moveHistory = data.moveHistory || [];
         return game;
     }
 
     public hasPlayer(playerId: string): boolean {
         return this.players.includes(playerId);
+    }
+
+    private addToHistory(action: Omit<GameAction, 'timestamp'>) {
+        const historyItem: GameAction = {
+            ...action,
+            timestamp: Date.now()
+        };
+        this.moveHistory.push(historyItem);
     }
 }

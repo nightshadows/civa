@@ -478,6 +478,7 @@ export class GameScene extends Phaser.Scene {
         this.renderMap(state.visibleTiles, state.visibleUnits);
         this.uiPanel!.updateTurnInfo(state.currentPlayerId, state.playerId, state.turnNumber);
         this.uiPanel!.updatePlayerList(state);
+        this.uiPanel?.updateMoveHistory(state.moveHistory);
     }
 
     preload() {

@@ -44,11 +44,18 @@ export interface GameState {
     visibleUnits: Unit[];
     mapSize: number;
     turnNumber: number;
+    moveHistory: GameAction[];
 }
 
 export interface GameAction {
-    type: 'MOVE_UNIT' | 'END_TURN';
-    payload: MoveUnitPayload | null;
+    type: 'MOVE_UNIT' | 'END_TURN' | 'FORTIFY_UNIT';
+    playerId: string;
+    timestamp: number;
+    payload?: {
+        unitId?: string;
+        from?: Position;
+        to?: Position;
+    };
 }
 
 export interface MoveUnitPayload {

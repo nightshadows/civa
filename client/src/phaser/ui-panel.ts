@@ -1,4 +1,4 @@
-import { GameState, Unit } from '@shared/types';
+import { GameState, Unit, GameAction } from '@shared/types';
 
 export class UIPanel {
     private scene: Phaser.Scene;
@@ -16,6 +16,7 @@ export class UIPanel {
     private height: number;
     private menuButton!: Phaser.GameObjects.Rectangle;
     private menuText!: Phaser.GameObjects.Text;
+    private moveHistoryText: Phaser.GameObjects.Text;
 
     constructor(scene: Phaser.Scene, height: number) {
         this.scene = scene;
@@ -76,6 +77,12 @@ export class UIPanel {
         }).setDepth(101);
 
         this.createButtons();
+
+        this.moveHistoryText = this.scene.add.text(10, baseY + 80, '', {
+            fontSize: '12px',
+            color: '#ffffff',
+            wordWrap: { width: this.scene.game.canvas.width - 20 }
+        }).setDepth(101);
     }
 
     private createButtons() {
@@ -153,7 +160,7 @@ export class UIPanel {
         this.unitInfoTexts[1].setText(`HP: ${unit.currentHp}/${unit.maxHp} (${healthPercent}%)`).setColor(healthColor);
         this.unitInfoTexts[2].setText(`ATK: ${unit.attack}  DEF: ${unit.defense}`).setColor('#999999');
         this.unitInfoTexts[3].setText(`EXP: ${unit.currentExp}/${unit.expNeeded} (${expPercent}%)`).setColor('#999999');
-        this.unitInfoTexts[4].setText(`Movement: ${unit.movementPoints}  Vision: ${unit.visionRange}`).setColor('#ffffff');
+        this.unitInfoTexts[4].setText(`Movement: ${unit.movementPoints}  Vision: ${unit.visionRange}`).setColor('#f00fff');
 
         // Update button states
         this.fortifyButton.setFillStyle(unit.movementPoints > 0 ? 0x44aa44 : 0x666666);
@@ -195,5 +202,25 @@ export class UIPanel {
         this.playerList.setText(
             'Players:\n' + players.join('\n')
         );
+    }
+
+    public updateMoveHistory(history: GameAction[]): void {
+        const lastMoves = history.slice(-5).map(action => {
+            const time = new Date(action.timestamp).toLocaleTimeString();
+            switch (action.type) {
+                case 'MOVE_UNIT':
+                    const to = action.payload?.to;
+                    const from = action.payload?.from;
+                    return `[${time}] Player ${action.playerId} moved unit ${action.payload?.unitId} from (${from?.x},${from?.y}) to (${to?.x},${to?.y})`;
+                case 'END_TURN':
+                    return `[${time}] Player ${action.playerId} ended turn`;
+                case 'FORTIFY_UNIT':
+                    return `[${time}] Player ${action.playerId} fortified unit ${action.payload?.unitId}`;
+                default:
+                    return '';
+            }
+        });
+
+        this.moveHistoryText.setText('Recent moves:\n' + lastMoves.join('\n'));
     }
 }
