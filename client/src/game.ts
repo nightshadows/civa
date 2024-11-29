@@ -91,6 +91,14 @@ const gameActions: GameActions = {
             gameId,
             playerId
         }));
+    },
+
+    deleteGame: (gameId) => {
+        socket.send(JSON.stringify({
+            type: 'delete_game',
+            gameId,
+            playerId
+        }));
     }
 };
 

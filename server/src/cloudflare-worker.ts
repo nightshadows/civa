@@ -1,7 +1,15 @@
 /// <reference types="@cloudflare/workers-types" />
 
 import { Game } from './game';
-import { createErrorMessage, GameManager, GameMessage, getPlayerIdFromWs, handleGameMessage } from './message-handler';
+import {
+  createErrorMessage,
+  createGamesListMessage,
+  GameManager,
+  GameMessage,
+  getPlayerIdFromWs,
+  handleGameMessage,
+  getAvailableGames
+} from './message-handler';
 
 export interface Env {
   GAME: DurableObjectNamespace;
@@ -52,32 +60,6 @@ export class GameDO {
     }
   }
 
-  async fetch(request: Request) {
-    await this.initialized;
-    const url = new URL(request.url);
-
-    if (url.pathname === '/reset') {
-      console.log('Clearing state for game:', url.searchParams.get('gameId'));
-      await this.state.storage.deleteAll();
-      this.gameManager.games.clear();
-      this.gameManager.playerSessions.clear();
-      this.sessions.clear();
-      this.wsToPlayer.clear();
-      return new Response('State cleared', { status: 200 });
-    }
-
-    if (request.headers.get('Upgrade') === 'websocket') {
-      const { 0: client, 1: server } = new WebSocketPair();
-      await this.handleWebSocket(server);
-      return new Response(null, {
-        status: 101,
-        webSocket: client,
-      });
-    }
-
-    return new Response('Expected WebSocket', { status: 400 });
-  }
-
   private async handleWebSocket(ws: WebSocket) {
     ws.accept();
 
@@ -109,6 +91,30 @@ export class GameDO {
           this.gameManager.games.set(result.game.gameId, result.game);
           console.log('Saved game state:', result.game.gameId);
         }
+
+        // Handle game deletion in Durable Object storage
+        if (data.type === 'delete_game' && !result.error) {
+          await this.state.storage.delete(`game:${data.gameId}`);
+          console.log('Deleted game from storage:', data.gameId);
+
+          // Get the complete list of games after deletion
+          const allGames = await this.state.storage.list({ prefix: 'game:' });
+          // Sync memory state with storage
+          this.gameManager.games.clear();
+          for (const [key, value] of allGames) {
+            const storedGame = Game.fromJSON(value);
+            this.gameManager.games.set(storedGame.gameId, storedGame);
+          }
+
+          // Now get available games and broadcast
+          const availableGames = getAvailableGames(this.gameManager);
+          console.log('Broadcasting updated games list:', availableGames);
+          this.sessions.forEach((clientWs) => {
+            if (clientWs.readyState === 1) {
+              clientWs.send(JSON.stringify(createGamesListMessage(availableGames)));
+            }
+          });
+        }
       } catch (error) {
         console.error('Error handling message:', error);
         ws.send(JSON.stringify(createErrorMessage('Internal server error')));
@@ -123,5 +129,31 @@ export class GameDO {
         this.wsToPlayer.delete(ws);
       }
     });
+  }
+
+  async fetch(request: Request) {
+    await this.initialized;
+    const url = new URL(request.url);
+
+    if (url.pathname === '/reset') {
+      console.log('Clearing state for game:', url.searchParams.get('gameId'));
+      await this.state.storage.deleteAll();
+      this.gameManager.games.clear();
+      this.gameManager.playerSessions.clear();
+      this.sessions.clear();
+      this.wsToPlayer.clear();
+      return new Response('State cleared', { status: 200 });
+    }
+
+    if (request.headers.get('Upgrade') === 'websocket') {
+      const { 0: client, 1: server } = new WebSocketPair();
+      await this.handleWebSocket(server);
+      return new Response(null, {
+        status: 101,
+        webSocket: client,
+      });
+    }
+
+    return new Response('Expected WebSocket', { status: 400 });
   }
 }

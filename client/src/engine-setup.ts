@@ -10,6 +10,7 @@ export interface GameActions {
     joinGame: (gameId: string) => void;
     listGames: () => void;
     createGame: (gameId: string) => void;
+    deleteGame: (gameId: string) => void;
 }
 
 export type GameEvents = {

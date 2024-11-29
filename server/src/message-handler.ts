@@ -10,7 +10,7 @@ export type GameAction = {
 };
 
 export type GameMessage = {
-  type: 'join_game' | 'action' | 'game_state' | 'error' | 'list_games' | 'games_list' | 'create_game';
+  type: 'join_game' | 'action' | 'game_state' | 'error' | 'list_games' | 'games_list' | 'create_game' | 'delete_game';
   gameId?: string;
   playerId?: string;
   action?: GameAction;
@@ -154,11 +154,16 @@ export function getAvailableGames(
   gameManager: GameManager,
   playerId?: string
 ): string[] {
-  return Array.from(gameManager.games.entries())
-    .filter(([_, game]) =>
-      game.canAddPlayer() || (playerId && game.hasPlayer(playerId))
-    )
-    .map(([gameId]) => gameId);
+  // Get all games, don't filter based on player status
+  const games = Array.from(gameManager.games.keys());
+
+  console.log('Getting available games:', {
+    totalGames: gameManager.games.size,
+    availableGames: games,
+    playerId
+  });
+
+  return games;
 }
 
 export function handleGameMessage(
@@ -229,6 +234,18 @@ export function handleGameMessage(
       break;
     }
 
+    case 'delete_game': {
+      const result = handleDeleteGame(data, ws, sessions, gameManager);
+      if (!result.success) {
+        ws.send(JSON.stringify(createErrorMessage(result.error!)));
+        return { error: result.error };
+      }
+      // Send one more games list update to ensure the client has the latest state
+      const availableGames = getAvailableGames(gameManager);
+      ws.send(JSON.stringify(createGamesListMessage(availableGames)));
+      return {};
+    }
+
     default:
       return { error: 'Unknown message type' };
   }
@@ -276,4 +293,55 @@ export function handleCreateGame(
 
   console.log(`Created new game ${gameId} with player ${playerId} and AI`);
   return { game: newGame };
+}
+
+export function handleDeleteGame(
+  data: GameMessage,
+  ws: GameWebSocket,
+  sessions: Map<string, GameWebSocket>,
+  gameManager: GameManager
+): { success: boolean; error?: string } {
+  const playerId = data.playerId!;
+  const gameId = data.gameId!;
+
+  console.log('Handling delete game:', { gameId, playerId });
+  console.log('Current games:', Array.from(gameManager.games.keys()));
+
+  const game = gameManager.games.get(gameId);
+  if (!game) {
+    return { success: false, error: 'Game not found' };
+  }
+
+  // Only allow players who are in the game to delete it
+  if (!game.hasPlayer(playerId)) {
+    return { success: false, error: 'Not authorized to delete this game' };
+  }
+
+  // Remove the game
+  gameManager.games.delete(gameId);
+  console.log('Games after deletion:', Array.from(gameManager.games.keys()));
+
+  // Remove any player sessions associated with this game
+  for (const [pid, gid] of gameManager.playerSessions.entries()) {
+    if (gid === gameId) {
+      gameManager.playerSessions.delete(pid);
+    }
+  }
+
+  // Get updated list of available games
+  const availableGames = getAvailableGames(gameManager);
+  console.log('Broadcasting available games after deletion:', availableGames);
+
+  // Send updated games list to all connected clients
+  sessions.forEach((clientWs) => {
+    if (clientWs.readyState === 1) { // WebSocket.OPEN
+      try {
+        clientWs.send(JSON.stringify(createGamesListMessage(availableGames)));
+      } catch (error) {
+        console.error('Error sending games list update to client:', error);
+      }
+    }
+  });
+
+  return { success: true };
 }
