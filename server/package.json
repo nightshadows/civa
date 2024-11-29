@@ -5,8 +5,9 @@
   "scripts": {
     "test": "vitest run",
     "test:watch": "vitest",
-    "start": "ts-node src/server.ts",
+    "prebuild": "cd ../shared && npm run build",
     "build": "tsc",
+    "start": "ts-node src/server.ts",
     "dev": "ts-node-dev src/server.ts",
     "dev:cloudflare": "npx wrangler dev  --port 3000",
     "release:cloudflare": "npm run build && npx wrangler deploy"
