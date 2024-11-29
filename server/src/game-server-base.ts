@@ -9,7 +9,7 @@ export interface GameWebSocket {
 }
 
 export interface GameStorage {
-    list(options: { prefix: string }): Promise<Array<{ key: string, value: any }>>;
+    list(options: { prefix: string }): Promise<Map<string, any>>;
     put(key: string, value: any): Promise<void>;
     delete(key: string): Promise<void>;
 }
@@ -57,7 +57,7 @@ export abstract class GameServerBase {
                 if (parts[1] === 'games') {
                     const allGames = await this.storage.list({ prefix: 'game:' });
                     const games = Array.from(allGames.keys())
-                        .map(key => key.replace('game:', ''));
+                        .map(key => key.toString().replace('game:', ''));
                     return { games };
                 }
                 break;
