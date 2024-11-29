@@ -1,21 +1,21 @@
-import { Unit } from '@shared/types';
+import { GameState, Unit } from '@shared/types';
 
 export class UIPanel {
     private scene: Phaser.Scene;
-    private background: Phaser.GameObjects.Rectangle;
+    private background!: Phaser.GameObjects.Rectangle;
     private unitInfoTexts: Phaser.GameObjects.Text[] = [];
-    private turnInfo: Phaser.GameObjects.Text;
-    private fortifyButton: Phaser.GameObjects.Rectangle;
-    private fortifyText: Phaser.GameObjects.Text;
-    private levelUpButton: Phaser.GameObjects.Rectangle;
-    private levelUpText: Phaser.GameObjects.Text;
-    private endTurnButton: Phaser.GameObjects.Rectangle;
-    private endTurnText: Phaser.GameObjects.Text;
-    private playerList: Phaser.GameObjects.Text;
-    private turnNumberText: Phaser.GameObjects.Text;
+    private turnInfo!: Phaser.GameObjects.Text;
+    private fortifyButton!: Phaser.GameObjects.Rectangle;
+    private fortifyText!: Phaser.GameObjects.Text;
+    private levelUpButton!: Phaser.GameObjects.Rectangle;
+    private levelUpText!: Phaser.GameObjects.Text;
+    private endTurnButton!: Phaser.GameObjects.Rectangle;
+    private endTurnText!: Phaser.GameObjects.Text;
+    private playerList!: Phaser.GameObjects.Text;
+    private turnNumberText!: Phaser.GameObjects.Text;
     private height: number;
-    private newGameButton: Phaser.GameObjects.Rectangle;
-    private newGameText: Phaser.GameObjects.Text;
+    private newGameButton!: Phaser.GameObjects.Rectangle;
+    private newGameText!: Phaser.GameObjects.Text;
 
     constructor(scene: Phaser.Scene, height: number) {
         this.scene = scene;

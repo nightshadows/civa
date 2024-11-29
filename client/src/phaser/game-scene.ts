@@ -11,11 +11,11 @@ export class GameScene extends Phaser.Scene {
     private highlightedHexes: Phaser.GameObjects.Graphics[] = [];
     private hexGrid: HexGrid;
     private selectedUnitSprite: Phaser.GameObjects.Graphics | null = null;
-    private uiPanel: UIPanel;
-    private mapContainer: Phaser.GameObjects.Container;
-    private view: View;
-    private debugText: Phaser.GameObjects.Text;
-    private gameActions: GameActions;
+    private uiPanel?: UIPanel;
+    private mapContainer?: Phaser.GameObjects.Container;
+    private view?: View;
+    private debugText?: Phaser.GameObjects.Text;
+    private gameActions?: GameActions;
     private gameEvents?: GameEventEmitter;
     private boundHandleGameState?: (state: GameState) => void;
     private uiPanelHeight: number = 150;
@@ -83,7 +83,7 @@ export class GameScene extends Phaser.Scene {
         // Calculate initial view position
         const initialX = (this.game.canvas.width - mapWidth * this.hexSize * 2 * 0.75) / 2;
         const initialY = (this.game.canvas.height - this.uiPanelHeight - mapHeight * this.hexSize * Math.sqrt(3)) / 2;
-        this.view.setPosition(0, 0);
+        this.view!.setPosition(0, 0);
 
         // Only keep left-click handler
         this.input.on('pointerdown', (pointer: Phaser.Input.Pointer) => {
@@ -107,8 +107,8 @@ export class GameScene extends Phaser.Scene {
 
         // Add keyboard controls for map panning
         const moveView = (deltaX: number, deltaY: number) => {
-            const currentPos = this.view.getPosition();
-            this.view.setPosition(currentPos.x + deltaX, currentPos.y + deltaY);
+            const currentPos = this.view!.getPosition();
+            this.view!.setPosition(currentPos.x + deltaX, currentPos.y + deltaY);
 
             const gameState = this.registry.get('gameState');
             if (gameState) {
@@ -250,25 +250,25 @@ export class GameScene extends Phaser.Scene {
     }
 
     public renderMap(tiles: { type: TileType; position: Position }[], units: Unit[] = []): void {
-        this.mapContainer.removeAll(true);
+        this.mapContainer!.removeAll(true);
         this.clearHighlights();
 
         const tilesContainer = new Phaser.GameObjects.Container(this, 0, 0);
         const unitsContainer = new Phaser.GameObjects.Container(this, 0, 0);
 
-        this.mapContainer.add(tilesContainer);
-        this.mapContainer.add(unitsContainer);
+        this.mapContainer!.add(tilesContainer);
+        this.mapContainer!.add(unitsContainer);
 
         tiles.forEach(tile => {
-            const worldPos = this.view.hexToWorld(tile.position);
-            const screenPos = this.view.worldToScreen(worldPos.x, worldPos.y);
+            const worldPos = this.view!.hexToWorld(tile.position);
+            const screenPos = this.view!.worldToScreen(worldPos.x, worldPos.y);
             const hex = this.drawHex(screenPos.x, screenPos.y, tile.type, tile.position);
             tilesContainer.add(hex);
         });
 
         units.forEach(unit => {
-            const worldPos = this.view.hexToWorld(unit.position);
-            const screenPos = this.view.worldToScreen(worldPos.x, worldPos.y);
+            const worldPos = this.view!.hexToWorld(unit.position);
+            const screenPos = this.view!.worldToScreen(worldPos.x, worldPos.y);
             const unitSprite = this.drawUnit(unit, screenPos.x, screenPos.y);
             unitsContainer.add(unitSprite);
         });
@@ -313,8 +313,8 @@ export class GameScene extends Phaser.Scene {
 
         // Draw highlights for each hex
         highlightHexes.forEach(hexPos => {
-            const worldPos = this.view.hexToWorld(hexPos);
-            const screenPos = this.view.worldToScreen(worldPos.x, worldPos.y);
+            const worldPos = this.view!.hexToWorld(hexPos);
+            const screenPos = this.view!.worldToScreen(worldPos.x, worldPos.y);
             const highlight = this.drawHexHighlight(screenPos.x, screenPos.y);
             this.highlightedHexes.push(highlight);
         });
@@ -351,7 +351,7 @@ export class GameScene extends Phaser.Scene {
             this.selectedUnitSprite.destroy();
             this.selectedUnitSprite = null;
         }
-        this.uiPanel.updateUnitInfo(null);
+        this.uiPanel!.updateUnitInfo(null);
     }
 
     private highlightSelectedUnit(unit: Unit): void {
@@ -359,8 +359,8 @@ export class GameScene extends Phaser.Scene {
             this.selectedUnitSprite.destroy();
         }
 
-        const worldPos = this.view.hexToWorld(unit.position);
-        const screenPos = this.view.worldToScreen(worldPos.x, worldPos.y);
+        const worldPos = this.view!.hexToWorld(unit.position);
+        const screenPos = this.view!.worldToScreen(worldPos.x, worldPos.y);
 
         // Create a new highlight for the selected unit
         const highlight = this.add.graphics();
@@ -370,12 +370,12 @@ export class GameScene extends Phaser.Scene {
         highlight.strokeCircle(screenPos.x, screenPos.y, this.hexSize - 5);
 
         this.selectedUnitSprite = highlight;
-        this.uiPanel.updateUnitInfo(unit);
+        this.uiPanel!.updateUnitInfo(unit);
     }
 
     private handleHexClick(pointer: Phaser.Input.Pointer): void {
-        const clickedHexPos = this.view.screenToHex(pointer.x, pointer.y);
-        const worldPos = this.view.screenToWorld(pointer.x, pointer.y);
+        const clickedHexPos = this.view!.screenToHex(pointer.x, pointer.y);
+        const worldPos = this.view!.screenToWorld(pointer.x, pointer.y);
         const gameState = this.registry.get('gameState') as GameState;
 
         // Early return if no game state
@@ -391,11 +391,11 @@ export class GameScene extends Phaser.Scene {
         }, []);
 
         // Update debug text
-        this.debugText.setText(
+        this.debugText!.setText(
             `Screen: (${Math.round(pointer.x)}, ${Math.round(pointer.y)})\n` +
             `World: (${Math.round(worldPos.x)}, ${Math.round(worldPos.y)})\n` +
             `Hex: (${clickedHexPos.x}, ${clickedHexPos.y})\n` +
-            `View: (${this.view.getPosition().x}, ${this.view.getPosition().y})`
+            `View: (${this.view!.getPosition().x}, ${this.view!.getPosition().y})`
         );
 
         const clickedUnit = this.findUnitAtPosition(pointer.x, pointer.y);
@@ -424,7 +424,7 @@ export class GameScene extends Phaser.Scene {
             );
 
             if (canMoveTo) {
-                this.gameActions.moveUnit(this.selectedUnit.id, clickedHexPos);
+                this.gameActions!.moveUnit(this.selectedUnit.id, clickedHexPos);
             }
         } else {
             this.clearSelection();
@@ -432,7 +432,7 @@ export class GameScene extends Phaser.Scene {
     }
 
     private findUnitAtPosition(screenX: number, screenY: number): Unit | null {
-        const hexPos = this.view.screenToHex(screenX, screenY);
+        const hexPos = this.view!.screenToHex(screenX, screenY);
         const units = this.getVisibleUnits();
 
         return units.find(unit =>
@@ -449,7 +449,7 @@ export class GameScene extends Phaser.Scene {
 
     private handleFortify() {
         if (this.selectedUnit && this.selectedUnit.movementPoints > 0) {
-            this.gameActions.fortifyUnit(this.selectedUnit.id);
+            this.gameActions!.fortifyUnit(this.selectedUnit.id);
         }
     }
 
@@ -458,7 +458,7 @@ export class GameScene extends Phaser.Scene {
     }
 
     private handleEndTurn() {
-        this.gameActions.endTurn();
+        this.gameActions!.endTurn();
     }
 
     private handleNewGame() {
@@ -470,14 +470,14 @@ export class GameScene extends Phaser.Scene {
 
         // Create new game
         const newGameId = 'game-' + Math.random().toString(36).substring(2, 9);
-        this.gameActions.createGame(newGameId);
+        this.gameActions!.createGame(newGameId);
     }
 
     private handleGameState(state: GameState) {
         this.registry.set('gameState', state);
         this.renderMap(state.visibleTiles, state.visibleUnits);
-        this.uiPanel.updateTurnInfo(state.currentPlayerId, state.playerId, state.turnNumber);
-        this.uiPanel.updatePlayerList(state);
+        this.uiPanel!.updateTurnInfo(state.currentPlayerId, state.playerId, state.turnNumber);
+        this.uiPanel!.updatePlayerList(state);
     }
 
     preload() {

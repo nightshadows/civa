@@ -1,8 +1,7 @@
 import Phaser from 'phaser';
 import { GameScene as PhaserGameScene } from './phaser/game-scene';
 import { BabylonGameScene } from './babylon/babylon-game-scene';
-import { GameState, GameAction } from '@shared/game-state';
-import { Position } from '@shared/types';
+import { Position, GameState } from '@shared/types';
 
 export interface GameActions {
     moveUnit: (unitId: string, destination: Position) => void;
@@ -27,6 +26,7 @@ export class GameEventEmitter {
 
     on<K extends keyof GameEvents>(event: K, callback: (data: GameEvents[K]) => void) {
         if (!this.listeners[event]) {
+            // @ts-ignore typescript can't coerce the type of the key
             this.listeners[event] = new Set();
         }
         this.listeners[event]!.add(callback);

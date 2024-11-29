@@ -5,13 +5,13 @@ import { Unit, GameState } from '@shared/types';
 export class BabylonUIPanel {
     private advancedTexture: AdvancedDynamicTexture;
     private unitInfoTexts: TextBlock[] = [];
-    private turnInfo: TextBlock;
-    private turnNumberText: TextBlock;
-    private fortifyButton: Rectangle;
-    private levelUpButton: Rectangle;
-    private endTurnButton: Rectangle;
-    private playerList: TextBlock;
-    private mainPanel: StackPanel;
+    private turnInfo?: TextBlock;
+    private turnNumberText!: TextBlock;
+    private fortifyButton!: Rectangle;
+    private levelUpButton!: Rectangle;
+    private endTurnButton!: Rectangle;
+    private playerList!: TextBlock;
+    private mainPanel!: StackPanel;
     private onEndTurn?: () => void;
     private onFortifyUnit?: () => void;
     private onLevelUpUnit?: () => void;
@@ -209,8 +209,8 @@ export class BabylonUIPanel {
 
     public updateTurnInfo(currentPlayerId: string, myPlayerId: string, turnNumber: number) {
         const isMyTurn = currentPlayerId === myPlayerId;
-        this.turnInfo.text = isMyTurn ? 'Your Turn' : 'Enemy Turn';
-        this.turnInfo.color = isMyTurn ? '#44ff44' : '#ff4444';
+        this.turnInfo!.text = isMyTurn ? 'Your Turn' : 'Enemy Turn';
+        this.turnInfo!.color = isMyTurn ? '#44ff44' : '#ff4444';
         this.turnNumberText.text = `Turn ${turnNumber}`;
         this.endTurnButton.background = isMyTurn ? "#44aa44" : "#666666";
     }

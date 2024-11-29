@@ -14,9 +14,9 @@ export class BabylonGameScene {
     private selectedUnit: Unit | null = null;
     private highlightedHexes: TransformNode[] = [];
     private hexGrid: BabylonHexGrid;
-    private selectedUnitMesh: TransformNode | null = null;
-    private uiPanel: BabylonUIPanel;
-    private gameActions: GameActions;
+    private selectedUnitMesh: Mesh | null = null;
+    private uiPanel?: BabylonUIPanel;
+    private gameActions?: GameActions;
     private gameEvents?: GameEventEmitter;
     private boundHandleGameState?: (state: GameState) => void;
     private currentGameState?: GameState;
@@ -86,11 +86,11 @@ export class BabylonGameScene {
         this.uiPanel = new BabylonUIPanel(this.scene);
         this.uiPanel.setCallbacks({
             onEndTurn: () => {
-                this.gameActions.endTurn();
+                this.gameActions!.endTurn();
             },
             onFortifyUnit: () => {
                 if (this.selectedUnit) {
-                    this.gameActions.fortifyUnit(this.selectedUnit.id);
+                    this.gameActions!.fortifyUnit(this.selectedUnit.id);
                 }
             },
             onLevelUpUnit: () => {
@@ -252,7 +252,7 @@ export class BabylonGameScene {
             );
 
             if (canMoveTo) {
-                this.gameActions.moveUnit(this.selectedUnit.id, hexPos);
+                this.gameActions!.moveUnit(this.selectedUnit.id, hexPos);
             }
         }
     }
@@ -280,8 +280,8 @@ export class BabylonGameScene {
             }
         }
 
-        this.uiPanel.updateTurnInfo(state.currentPlayerId, state.playerId, state.turnNumber);
-        this.uiPanel.updatePlayerList(state);
+        this.uiPanel!.updateTurnInfo(state.currentPlayerId, state.playerId, state.turnNumber);
+        this.uiPanel!.updatePlayerList(state);
     }
 
     private getVisibleUnits(): Unit[] {
@@ -352,7 +352,7 @@ export class BabylonGameScene {
         if (this.selectedUnitMesh) {
             this.selectedUnitMesh.setEnabled(false); // Hide instead of dispose
         }
-        this.uiPanel.updateUnitInfo(null);
+        this.uiPanel!.updateUnitInfo(null);
     }
 
     private highlightSelectedUnit(unit: Unit): void {
@@ -372,7 +372,7 @@ export class BabylonGameScene {
         this.selectedUnitMesh!.setEnabled(true);
 
         // Update UI
-        this.uiPanel.updateUnitInfo(unit);
+        this.uiPanel!.updateUnitInfo(unit);
     }
 
     // Separate method to create the highlight mesh
