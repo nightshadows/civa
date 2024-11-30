@@ -1,4 +1,4 @@
-import { TileType, Position, GameState, UnitType, Unit } from '@shared/types';
+import { TileType, Position, GameState, UnitType, Unit, CombatType } from '@shared/types';
 import { HexGrid } from './hex-grid';
 import { UIPanel } from './ui-panel';
 import { View } from './view';
@@ -321,9 +321,13 @@ export class GameScene extends Phaser.Scene {
     }
 
     private drawHexHighlight(x: number, y: number): Phaser.GameObjects.Graphics {
+        return this.drawHexHighlightColor(x, y, 0xffff00);
+    }
+
+    private drawHexHighlightColor(x: number, y: number, color: number): Phaser.GameObjects.Graphics {
         const highlight = this.add.graphics();
-        highlight.lineStyle(2, 0xffff00, 0.5);
-        highlight.fillStyle(0xffff00, 0.2);
+        highlight.lineStyle(2, color, 0.5);
+        highlight.fillStyle(color, 0.2);
 
         const points: { x: number, y: number }[] = [];
         for (let i = 0; i < 6; i++) {
@@ -402,15 +406,24 @@ export class GameScene extends Phaser.Scene {
 
         if (clickedUnit) {
             if (clickedUnit.playerId === this.playerId) {
+                // Select own unit
                 if (this.selectedUnit === clickedUnit) {
                     this.clearSelection();
                 } else {
                     this.selectedUnit = clickedUnit;
                     this.highlightSelectedUnit(clickedUnit);
-                    this.showMovementRange(clickedUnit);
+                    if (clickedUnit.movementPoints > 0) {
+                        this.showMovementRange(clickedUnit);
+                        // Also show attack range for the selected unit
+                        this.showAttackRange(clickedUnit, mapData, gameState);
+                    }
                 }
-            } else if (this.selectedUnit) {
-                if (this.areUnitsAdjacent(this.selectedUnit.position, clickedUnit.position)) {
+            } else if (this.selectedUnit && this.selectedUnit.movementPoints > 0) {
+                // Check if target is within attack range
+                const distance = this.getHexDistance(this.selectedUnit.position, clickedUnit.position);
+                const canAttack = this.canAttackTarget(this.selectedUnit, clickedUnit, distance);
+                
+                if (canAttack) {
                     this.gameActions!.attackUnit(this.selectedUnit.id, clickedUnit.id);
                     this.clearSelection();
                 }
@@ -509,5 +522,40 @@ export class GameScene extends Phaser.Scene {
     private areUnitsAdjacent(pos1: Position, pos2: Position): boolean {
         const neighbors = this.hexGrid.getNeighbors(pos1);
         return neighbors.some(n => n.x === pos2.x && n.y === pos2.y);
+    }
+
+    private getHexDistance(pos1: Position, pos2: Position): number {
+        return Math.max(
+            Math.abs(pos1.x - pos2.x),
+            Math.abs(pos1.y - pos2.y),
+            Math.abs((pos1.x - pos1.y) - (pos2.x - pos2.y))
+        );
+    }
+
+    private canAttackTarget(attacker: Unit, defender: Unit, distance: number): boolean {
+        if (attacker.combatType === CombatType.MELEE) {
+            return distance === 1;
+        } else if (attacker.combatType === CombatType.RANGED) {
+            return distance <= (attacker.range || 1);
+        }
+        return false;
+    }
+
+    // Add this method to show attack range
+    private showAttackRange(unit: Unit, mapData: TileType[][], gameState: GameState): void {
+        const range = unit.combatType === CombatType.RANGED ? (unit.range || 1) : 1;
+        const hexesInRange = this.hexGrid.getHexesInRange(
+            unit.position,
+            unit.movementPoints,
+            { width: gameState.mapSize, height: gameState.mapSize },
+            mapData
+        );
+        
+        hexesInRange.forEach(hexPos => {
+            const worldPos = this.view!.hexToWorld(hexPos);
+            const screenPos = this.view!.worldToScreen(worldPos.x, worldPos.y);
+            const highlight = this.drawHexHighlightColor(screenPos.x, screenPos.y, 0xff0000);
+            this.highlightedHexes.push(highlight);
+        });
     }
 }
