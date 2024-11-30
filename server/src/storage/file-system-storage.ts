@@ -47,4 +47,14 @@ export class FileSystemStorage implements GameStorage {
             throw error;
         }
     }
+
+    async get(options: { prefix: string }): Promise<any> {
+        try {
+            const content = await fs.readFile(path.join(this.storageDir, options.prefix), 'utf-8');
+            return JSON.parse(content);
+        } catch (error) {
+            console.error('Error reading file:', error);
+            throw error;
+        }
+    }
 } 

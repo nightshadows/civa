@@ -1,6 +1,7 @@
 import { Position } from "../../shared/src/types";
 import { Game } from "./game";
 import { PlayerType, PlayerConfig } from "./game/player-types";
+import { WebSocketManager } from "./websocket/websocket-manager";
 
 export type GameAction = {
   type: 'MOVE_UNIT' | 'END_TURN' | 'FORTIFY_UNIT' | 'ATTACK_UNIT';
@@ -89,18 +90,20 @@ export interface GameManager {
 
 export function broadcastGameState(
   game: Game,
-  sessions: Map<string, GameWebSocket>  // Always playerId -> WebSocket
+  wsManager: WebSocketManager
 ) {
   console.log(`[broadcastGameState] Starting broadcast for game ${game.gameId}`);
-  console.log(`[broadcastGameState] Total connected sessions: ${sessions.size}`);
+  const players = game.getPlayers();
+  console.log(`[broadcastGameState] Total players: ${players.length}`);
 
   let broadcastCount = 0;
   let skippedCount = 0;
 
-  sessions.forEach((ws, playerId) => {
-    if (ws.readyState === 1) { // WebSocket.OPEN
-      const playerState = game.getVisibleState(playerId);
-      console.log(`[broadcastGameState] Sending state to player ${playerId}:`, {
+  players.forEach(player => {
+    const ws = wsManager.getSocketFromPlayer(player.id);
+    if (ws?.readyState === 1) { // WebSocket.OPEN
+      const playerState = game.getVisibleState(player.id);
+      console.log(`[broadcastGameState] Sending state to player ${player.id}:`, {
         turnNumber: playerState.turnNumber,
         currentPlayer: playerState.currentPlayerId,
         visibleUnits: playerState.visibleUnits.length,
@@ -110,7 +113,7 @@ export function broadcastGameState(
       ws.send(JSON.stringify(createGameStateMessage(playerState)));
       broadcastCount++;
     } else {
-      console.log(`[broadcastGameState] Skipping player ${playerId} - socket not open (state: ${ws.readyState})`);
+      console.log(`[broadcastGameState] Skipping player ${player.id} - socket not open (state: ${ws?.readyState})`);
       skippedCount++;
     }
   });
@@ -118,21 +121,16 @@ export function broadcastGameState(
   console.log(`[broadcastGameState] Broadcast complete:`, {
     successful: broadcastCount,
     skipped: skippedCount,
-    total: sessions.size
+    total: players.length
   });
 }
 
 export function handleJoinGame(
   data: GameMessage,
-  ws: GameWebSocket,
-  sessions: Map<string, GameWebSocket>,
   gameManager: GameManager
 ): { game: Game | null; error?: string } {
   let gameId = data.gameId!;
   const playerId = data.playerId!;
-
-  // Update session
-  sessions.set(playerId, ws);
 
   // Clear any existing player session
   const oldGameId = gameManager.playerSessions.get(playerId);
@@ -160,19 +158,18 @@ export function handleJoinGame(
 export function handleGameMessage(
   data: GameMessage,
   ws: GameWebSocket,
-  sessions: Map<string, GameWebSocket>,  // Always playerId -> WebSocket
+  wsManager: WebSocketManager,
   gameManager: GameManager
 ): { game?: Game | null; error?: string } {
   switch (data.type) {
-
     case 'join_game': {
-      const result = handleJoinGame(data, ws, sessions, gameManager);
+      const result = handleJoinGame(data, gameManager);
       if (result.error) {
         ws.send(JSON.stringify(createErrorMessage(result.error)));
         return { error: result.error };
       }
       if (result.game) {
-        broadcastGameState(result.game, sessions);
+        broadcastGameState(result.game, wsManager);
         return { game: result.game };
       }
       break;
@@ -189,16 +186,16 @@ export function handleGameMessage(
         return { error: 'No game session' };
       }
 
-      const currentGame = gameManager.games.get(gameId);
-      if (!currentGame) {
+      const game = gameManager.games.get(gameId);
+      if (!game) {
         console.error('Game not found:', gameId);
         return { error: 'Game not found' };
       }
 
-      const result = handleGameAction(currentGame, playerId, data.action!);
+      const result = handleGameAction(game, playerId, data.action!);
       if (result.success) {
-        broadcastGameState(currentGame, sessions);
-        return { game: currentGame };
+        broadcastGameState(game, wsManager);
+        return { game };
       } else {
         ws.send(JSON.stringify(createErrorMessage(result.error!)));
         return { error: result.error };
@@ -217,3 +214,4 @@ export function getPlayerIdFromWs(ws: GameWebSocket, sessions: Map<string, GameW
   }
   return null;
 }
+

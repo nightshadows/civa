@@ -50,11 +50,40 @@
             margin: 20px auto;
             padding: 10px 20px;
         }
+        .login-link {
+            padding: 8px 16px;
+            background: #1099bb;
+            color: white;
+            text-decoration: none;
+            border-radius: 4px;
+            transition: background-color 0.2s;
+        }
+        
+        .login-link:hover {
+            background: #0088aa;
+        }
+        .user-section {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        
+        .player-name {
+            font-weight: 500;
+            color: #666;
+        }
     </style>
 </head>
 <body>
     <div id="gamesList">
-        <h1>Available Games</h1>
+        <div style="display: flex; justify-content: space-between; align-items: center;">
+            <h1>Available Games</h1>
+            <div class="user-section">
+                <span id="playerName" class="player-name"></span>
+                <a href="./login.html" class="login-link" id="loginLink">Login</a>
+                <button class="login-link" id="logoutButton" style="display: none; border: none;">Logout</button>
+            </div>
+        </div>
         <button class="join-button create-game" id="createGame">Create New Game</button>
         <div id="gamesContainer"></div>
     </div>

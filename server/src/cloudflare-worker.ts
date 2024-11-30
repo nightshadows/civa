@@ -3,25 +3,32 @@
 import {
   GameMessage,
 } from './message-handler';
-import { GameServerBase, GameStorage } from './game-server-base';
+import { GameServerBase, GameStorage, Player, ServerRequest } from './game-server-base';
+import { createSessionToken, verifySessionToken, createSessionCookie, SessionPayload } from './auth/session';
 
 export interface Env {
   GAME: DurableObjectNamespace;
+  JWT_SECRET: string;
 }
 
 export class CloudflareStorage implements GameStorage {
-  constructor(private storage: DurableObjectStorage) {}
+  constructor(private storage: DurableObjectStorage) { }
 
   async put(key: string, value: any): Promise<void> {
-      await this.storage.put(key, value);
+    await this.storage.put(key, value);
   }
 
   async delete(key: string): Promise<void> {
-      await this.storage.delete(key);
+    await this.storage.delete(key);
   }
   async list(options: { prefix: string }): Promise<Map<string, any>> {
-      return await this.storage.list({ prefix: options.prefix });
+    return await this.storage.list({ prefix: options.prefix });
   }
+
+  async get(options: { prefix: string }): Promise<Player | undefined> {
+    return await this.storage.get(`${options.prefix}`);
+  }
+
 }
 
 export { CloudflareGameServer as GameDO }
@@ -31,75 +38,145 @@ export default {
     const url = new URL(request.url);
     const gameObjectId = env.GAME.idFromName('default');
     const gameObject = env.GAME.get(gameObjectId);
-    
+
     // Forward all requests to the Durable Object
     return gameObject.fetch(request);
   }
 };
 
 export class CloudflareGameServer extends GameServerBase {
-    constructor(private state: DurableObjectState) {
-      const storage = new CloudflareStorage(state.storage);
-        super(storage);
-    }
+  constructor(
+    private state: DurableObjectState,
+    private env: Env
+  ) {
+    const storage = new CloudflareStorage(state.storage);
+    super(storage);
+  }
 
-    async fetch(request: Request): Promise<Response> {
-        await this.initialized;
+  protected async getSessionFromRequest(request: ServerRequest): Promise<SessionPayload | null> {
+    const cookieHeader = request.headers.get('Cookie');
+    if (!cookieHeader) return null;
 
-        if (request.method === 'OPTIONS') {
-            return new Response(null, { headers: this.corsHeaders });
+    const sessionMatch = cookieHeader.match(/session=([^;]+)/);
+    if (!sessionMatch) return null;
+
+    return await verifySessionToken(sessionMatch[1], this.env.JWT_SECRET);
+  }
+
+  protected async getPlayerFromRequest(request: ServerRequest | undefined): Promise<Player | undefined> {
+    if (!request) return undefined;
+    const session = await this.getSessionFromRequest(request);
+    if (!session) return undefined;
+    return await this.storage.get({ prefix: `player:${session.sub}` });
+  }
+
+  protected getCorsHeaders(request: Request) {
+    const origin = request.headers.get('Origin') || '';
+    const isLocalhost = origin.includes('localhost');
+    const allowedOrigin = isLocalhost ? origin : 'https://your-production-domain.com';
+
+    return {
+      'Access-Control-Allow-Origin': allowedOrigin,
+      'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
+      'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+      'Access-Control-Allow-Credentials': 'true',
+    };
+  }
+
+  async fetch(request: Request): Promise<Response> {
+    await this.initialized;
+
+    // Handle CORS preflight request
+    if (request.method === 'OPTIONS') {
+      return new Response(null, {
+        status: 204, // No content
+        headers: {
+          ...this.getCorsHeaders(request),
+          'Access-Control-Max-Age': '86400', // 24 hours cache for preflight
         }
+      });
+    }
 
-        const url = new URL(request.url);
-        const parts = url.pathname.split('/').filter(Boolean);
+    const url = new URL(request.url);
+    const parts = url.pathname.split('/').filter(Boolean);
 
-        // Handle REST API endpoints
-        if (parts[0] === 'api') {
-            const body = request.method !== 'GET' ? await request.json() : undefined;
-            const result = await this.handleRestRequest(request.method, parts, body);
-            if (result) {
-                return new Response(JSON.stringify(result), {
-                    headers: {
-                        'Content-Type': 'application/json',
-                        ...this.corsHeaders
-                    }
-                });
-            }
-            return new Response('Not Found', { status: 404 });
+    // Skip auth check for registration and login endpoints
+    if (parts[0] === 'api' && !['register', 'auth'].includes(parts[1])) {
+      const authResponse = await this.checkAuthorized(request);
+      if (authResponse) {
+        return authResponse;
+      }
+    }
+
+    if (parts[0] === 'api') {
+      let body;
+      try {
+        body = request.method !== 'GET' ? await request.json() : undefined;
+      } catch (e) {
+        return new Response('Invalid JSON', {
+          status: 400,
+          headers: this.getCorsHeaders(request)
+        });
+      }
+
+      const result = await this.handleRestRequest(request.method, parts, body, request);
+      if (result) {
+        const headers = {
+          'Content-Type': 'application/json',
+          ...this.getCorsHeaders(request),
+          ...(result.headers || {})
+        };
+
+        return new Response(JSON.stringify(result), { headers });
+      }
+
+    } else if (request.headers.get('Upgrade') === 'websocket') {
+      const player = await this.getPlayerFromRequest(request);
+      if (!player) {
+        return new Response('Unauthorized', { status: 401 });
+      }
+
+      const { 0: client, 1: server } = new WebSocketPair();
+      server.accept();
+
+      this.wsManager.setPlayerSocket(server, player.id);
+
+      server.addEventListener('message', async (msg) => {
+        const data = JSON.parse(msg.data as string) as GameMessage;
+        await this.handleWebSocketMessage(server, data);
+      });
+
+      server.addEventListener('close', () => {
+        this.handleWebSocketClose(server);
+      });
+
+      return new Response(null, {
+        status: 101,
+        webSocket: client,
+      });
+    }
+
+    return new Response('Not Found', { status: 404 });
+  }
+
+  private async checkAuthorized(request: Request): Promise<Response | undefined> {
+    const player = await this.getPlayerFromRequest(request);
+    if (!player) {
+      return new Response('Unauthorized', {
+        status: 401,
+        headers: {
+          ...this.getCorsHeaders(request),
+          'Content-Type': 'application/json'
         }
-
-        // Handle WebSocket
-        if (request.headers.get('Upgrade') === 'websocket') {
-            const { 0: client, 1: server } = new WebSocketPair();
-            server.accept();
-            
-            server.addEventListener('message', async (msg) => {
-                const data = JSON.parse(msg.data as string) as GameMessage;
-                await this.handleWebSocketMessage(server, data);
-            });
-
-            server.addEventListener('close', () => {
-                this.handleWebSocketClose(server);
-            });
-
-            return new Response(null, {
-                status: 101,
-                webSocket: client,
-            });
-        }
-
-        return new Response('Not Found', { status: 404 });
+      });
     }
+  }
 
-    protected setWebSocketPlayer(ws: WebSocket, playerId: string) {
-        this.wsToPlayer.set(ws, playerId);
-    }
+  protected async createSessionToken(playerId: string): Promise<string> {
+    return createSessionToken(playerId, this.env.JWT_SECRET);
+  }
 
-    protected getWebSocketPlayer(ws: WebSocket) {
-        return this.wsToPlayer.get(ws);
-    }
-
-    protected cleanupWebSocket(ws: WebSocket) {
-        this.wsToPlayer.delete(ws);
-    }
+  protected createSessionCookie(token: string): string {
+    return createSessionCookie(token);
+  }
 }

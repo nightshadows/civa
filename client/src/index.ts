@@ -1,14 +1,62 @@
-import { getOrCreatePlayerId, generateGameId } from './utils';
+import { generateGameId } from './utils';
 import { RestApiClient } from './api-client';
 
 // Check URL for 3D parameter
 const use3D = new URLSearchParams(window.location.search).has('3d');
-const playerId = getOrCreatePlayerId();
 const api = new RestApiClient();
+
+// Add this function to update the UI based on player state
+async function updatePlayerUI() {
+    const player = await api.getPlayer();
+    const playerNameElement = document.getElementById('playerName');
+    const loginLink = document.getElementById('loginLink');
+    const logoutButton = document.getElementById('logoutButton');
+    const createGameButton = document.getElementById('createGame');
+
+    if (player) {
+        // Player is logged in
+        if (playerNameElement) {
+            playerNameElement.textContent = player.name;
+        }
+        if (loginLink) {
+            loginLink.style.display = 'none';
+        }
+        if (logoutButton) {
+            logoutButton.style.display = 'block';
+        }
+        if (createGameButton) {
+            createGameButton.style.display = 'block';
+        }
+    } else {
+        // Player is not logged in
+        if (playerNameElement) {
+            playerNameElement.textContent = '';
+        }
+        if (loginLink) {
+            loginLink.style.display = 'block';
+        }
+        if (logoutButton) {
+            logoutButton.style.display = 'none';
+        }
+        if (createGameButton) {
+            createGameButton.style.display = 'none';
+        }
+    }
+}
 
 // Update games list UI
 const updateGamesList = async () => {
     try {
+        const player = await api.getPlayer();
+        if (!player) {
+            // If not logged in, show message instead of games list
+            const container = document.getElementById('gamesContainer');
+            if (container) {
+                container.innerHTML = '<p>Please log in to view and join games.</p>';
+            }
+            return;
+        }
+
         const games = await api.listGames();
         const container = document.getElementById('gamesContainer');
         if (!container) return;
@@ -43,7 +91,7 @@ const updateGamesList = async () => {
             button.addEventListener('click', async (e) => {
                 const gameId = (e.target as HTMLElement).closest('.delete-button')?.getAttribute('data-gameid');
                 if (gameId) {
-                    await api.deleteGame(gameId, playerId);
+                    await api.deleteGame(gameId);
                     updateGamesList();
                 }
             });
@@ -56,9 +104,20 @@ const updateGamesList = async () => {
 // Create game button handler
 document.getElementById('createGame')?.addEventListener('click', async () => {
     const newGameId = generateGameId();
-    await api.createGame(newGameId, playerId);
+    await api.createGame(newGameId);
     window.location.href = `game.html?gameId=${newGameId}${use3D ? '&3d' : ''}`;
 });
 
+// Update logout button handler
+document.getElementById('logoutButton')?.addEventListener('click', async () => {
+    try {
+        await api.logout();
+        window.location.reload();
+    } catch (error) {
+        console.error('Logout failed:', error);
+    }
+});
+
 // Initial load
+updatePlayerUI();
 updateGamesList();

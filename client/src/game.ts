@@ -1,17 +1,12 @@
 import { GameSetup } from './engine-setup';
 import { config } from './config';
-import { getOrCreatePlayerId } from './utils';
-import { Position } from '@shared/types';
-import { GameState } from '@shared/types';
+import { GameState, Position } from '@shared/types';
+import { RestApiClient } from './api-client';
 
 // Check URL for 3D parameter and gameId
 const urlParams = new URLSearchParams(window.location.search);
 const use3D = urlParams.has('3d');
 const gameId = urlParams.get('gameId');
-
-if (!gameId) {
-    window.location.href = '/'; // Redirect to landing page if no gameId
-}
 
 export interface GameActions {
     attackUnit: (attackerId: string, targetId: string) => void;
@@ -52,8 +47,8 @@ export class GameEventEmitter {
 
 const wsUrl = config.wsUrl;
 const socket = new WebSocket(wsUrl);
-const playerId = getOrCreatePlayerId();
 const gameEvents = new GameEventEmitter();
+const api = new RestApiClient();
 
 // Socket event handling
 socket.addEventListener('message', (event) => {
@@ -112,8 +107,7 @@ const gameActions: GameActions = {
     joinGame: () => {
         socket.send(JSON.stringify({
             type: 'join_game',
-            gameId,
-            playerId
+            gameId
         }));
     },
 
@@ -131,24 +125,43 @@ const gameActions: GameActions = {
     },
 };
 
-// Initialize game
-const game = GameSetup.createGame({
-    playerId,
-    gameId: gameId!,
-    gameActions,
-    gameEvents,
-    width: 800,
-    height: 550,
-    backgroundColor: '#1099bb',
-},
-() => {
-    console.log('Game initialized with ID:', gameId);
-    if (socket.readyState === WebSocket.OPEN) {
-        gameActions.joinGame();
-    } else {
-        socket.addEventListener('open', () => {
-            gameActions.joinGame();
-        });
+// Initialize game asynchronously
+async function initGame() {
+    const player = await api.getPlayer();
+    if (!player) {
+        window.location.href = '/'; // Redirect to landing page if not authenticated
+        return;
     }
-},
-use3D);
+
+    // Initialize game with authenticated player
+    const game = GameSetup.createGame({
+        playerId: player.id,
+        gameId: gameId!,
+        gameActions,
+        gameEvents,
+        width: 800,
+        height: 550,
+        backgroundColor: '#1099bb',
+    },
+    () => {
+        console.log('Game initialized with ID:', gameId);
+        if (socket.readyState === WebSocket.OPEN) {
+            gameActions.joinGame();
+        } else {
+            socket.addEventListener('open', () => {
+                gameActions.joinGame();
+            });
+        }
+    },
+    use3D);
+}
+
+// Start initialization
+if (!gameId) {
+    window.location.href = '/'; // Redirect to landing page if no gameId
+} else {
+    initGame().catch(error => {
+        console.error('Failed to initialize game:', error);
+        window.location.href = '/'; // Redirect on error
+    });
+}
