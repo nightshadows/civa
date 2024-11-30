@@ -53,3 +53,4 @@ Thumbs.db
 
 # Game data in node.js
 server/data/
+server/storage/
