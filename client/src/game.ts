@@ -143,6 +143,12 @@ const game = GameSetup.createGame({
 },
 () => {
     console.log('Game initialized with ID:', gameId);
-    gameActions.joinGame();
+    if (socket.readyState === WebSocket.OPEN) {
+        gameActions.joinGame();
+    } else {
+        socket.addEventListener('open', () => {
+            gameActions.joinGame();
+        });
+    }
 },
 use3D);
