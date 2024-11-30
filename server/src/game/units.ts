@@ -1,4 +1,4 @@
-import { Position, Unit, UnitType, CombatType } from '../../../shared/src/types';
+import { Position, Unit, UnitType, CombatType } from '@shared/types';
 
 interface UnitTemplate {
     type: UnitType;

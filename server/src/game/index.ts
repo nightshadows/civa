@@ -1,6 +1,6 @@
-import { TileType, Position, Unit, GameState, UnitType, Tile, GameAction } from '../../../shared/src/types';
+import { TileType, Position, Unit, GameState, UnitType, Tile, GameAction } from '@shared/types';
 import { getStartingUnits, createUnit, resetUnitMovement, isMeleeUnit, canAttackTarget } from './units';
-import { getMovementCost } from '../../../shared/src/terrain';
+import { getMovementCost } from '@shared/terrain';
 import { AIPlayer } from './ai-player';
 import { PlayerConfig, PlayerType } from './player-types';
 import { getHexDistance } from '../../../shared/src/hex-utils';

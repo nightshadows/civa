@@ -3,14 +3,16 @@
   "version": "1.0.0",
   "main": "index.js",
   "scripts": {
+    "clean": "rm -rf dist",
+    "pretest": "cd ../shared && npm run build",
     "test": "vitest run",
     "test:watch": "vitest",
-    "prebuild": "cd ../shared && npm run build",
+    "prebuild": "npm run clean && cd ../shared && npm run build",
     "build": "tsc",
-    "start": "ts-node src/node-server.ts",
-    "dev": "ts-node-dev src/node-server.ts",
+    "start": "ts-node -r tsconfig-paths/register src/node-server.ts",
+    "dev": "ts-node-dev -r tsconfig-paths/register src/node-server.ts",
     "dev:cloudflare": "npx wrangler dev  --port 3000",
-    "release:cloudflare": "npm run build && npx wrangler deploy"
+    "release:cloudflare": "npm run clean && npm run build && npx wrangler deploy"
   },
   "dependencies": {
     "@types/cors": "^2.8.17",
@@ -25,6 +27,7 @@
   },
   "devDependencies": {
     "@cloudflare/workers-types": "^4.20241112.0",
+    "tsconfig-paths": "^4.2.0",
     "vitest": "^1.6.0"
   }
 }

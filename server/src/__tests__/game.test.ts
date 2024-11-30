@@ -1,7 +1,7 @@
 import { describe, test, expect, beforeEach } from 'vitest';
 import { Game } from '../game';
-import { GameState, Position, TileType, Unit } from '../../../shared/src/types';
-import { getMovementCost } from '../../../shared/src/terrain';
+import { GameState, Position, TileType, Unit } from '@shared/types';
+import { getMovementCost } from '@shared/terrain';
 import { PlayerType } from '../game/player-types';
 
 describe('Game', () => {

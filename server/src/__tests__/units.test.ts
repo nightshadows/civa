@@ -1,6 +1,6 @@
 import { describe, test, expect } from 'vitest';
 import { createUnit, resetUnitMovement } from '../game/units';
-import { UnitType } from '../../../shared/src/types';
+import { UnitType } from '@shared/types';
 
 describe('Unit Management', () => {
     const playerId = 'test-player';
@@ -44,4 +44,4 @@ describe('Unit Management', () => {
             expect(warrior.movementPoints).toBe(2);
         });
     });
-}); 
+});
