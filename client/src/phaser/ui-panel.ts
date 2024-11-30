@@ -251,7 +251,7 @@ export class UIPanel {
                            (action.payload?.damageTaken ? ` and receiving ${action.payload.damageTaken} damage` : '');
 
                 case 'UNIT_DIED':
-                    return `Player ${action.playerId}'s unit was destroyed at (${action.payload?.to?.x},${action.payload?.to?.y})`;
+                    return `${action.playerId}'s unit ${action.payload?.unitId} was destroyed at (${action.payload?.to?.x},${action.payload?.to?.y})`;
 
                 case 'FORTIFY_UNIT':
                     return `Player ${action.playerId} fortified unit ${action.payload?.unitId}`;
