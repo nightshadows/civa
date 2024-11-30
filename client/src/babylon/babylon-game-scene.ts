@@ -44,13 +44,13 @@ export class BabylonGameScene {
             Vector3.Zero(),
             this.scene
         );
-        
+
         // Set camera limits
         this.camera.lowerRadiusLimit = 5;
         this.camera.upperRadiusLimit = 100;
         this.camera.lowerBetaLimit = 0.1;
         this.camera.upperBetaLimit = Math.PI / 2;
-        
+
         this.camera.attachControl(canvas, true);
 
         // Add lighting
@@ -169,11 +169,11 @@ export class BabylonGameScene {
 
             // Update position - ensure unit is positioned correctly
             unitMesh.position = new Vector3(worldPos.x, 0, worldPos.y); // Changed from 0.5 to 0 for base height
-            
+
             // Reset rotation and scaling to defaults (in case they were changed)
             unitMesh.rotation = Vector3.Zero();
             unitMesh.scaling = Vector3.One();
-            
+
             unitMesh.setEnabled(true);
             usedUnitMeshes.add(unitKey);
         });
@@ -240,7 +240,7 @@ export class BabylonGameScene {
                 return acc;
             }, []);
 
-            const movementHexes = this.hexGrid.getHexesInRange(
+            const movementHexes = this.hexGrid.getReachableAndVisibleHexes(
                 this.selectedUnit.position,
                 this.selectedUnit.movementPoints,
                 { width: this.currentGameState.mapSize, height: this.currentGameState.mapSize },
@@ -260,14 +260,14 @@ export class BabylonGameScene {
     private handleGameState(state: GameState) {
         this.currentGameState = state;
         this.renderMap(state.visibleTiles, state.visibleUnits);
-        
+
         // Update highlight position if there's a selected unit
         if (this.selectedUnit) {
             const updatedUnit = state.visibleUnits.find(u => u.id === this.selectedUnit!.id);
             if (updatedUnit) {
                 this.selectedUnit = updatedUnit; // Update the selected unit reference
                 this.highlightSelectedUnit(updatedUnit);
-                
+
                 // Recalculate movement range after unit has moved
                 if (updatedUnit.movementPoints > 0) {
                     this.showMovementRange(updatedUnit);
@@ -305,7 +305,7 @@ export class BabylonGameScene {
             return acc;
         }, []);
 
-        const movementHexes = this.hexGrid.getHexesInRange(
+        const movementHexes = this.hexGrid.getReachableAndVisibleHexes(
             unit.position,
             unit.movementPoints,
             { width: this.currentGameState.mapSize, height: this.currentGameState.mapSize },
@@ -358,7 +358,7 @@ export class BabylonGameScene {
     private highlightSelectedUnit(unit: Unit): void {
         const worldPos = this.view.hexToWorld(unit.position);
         const targetPosition = new Vector3(worldPos.x, 0, worldPos.y);
-        
+
         // Center camera on unit position
         this.centerCameraOnPosition(targetPosition);
 
@@ -455,4 +455,4 @@ export class BabylonGameScene {
         this.camera.alpha = Math.PI / 4; // 45 degrees
         this.camera.beta = Math.PI / 3;  // 60 degrees
     }
-} 
+}

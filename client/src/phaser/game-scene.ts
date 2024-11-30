@@ -304,7 +304,7 @@ export class GameScene extends Phaser.Scene {
             return acc;
         }, []);
 
-        const movementHexes = this.hexGrid.getHexesInRange(
+        const movementHexes = this.hexGrid.getReachableAndVisibleHexes(
             unit.position,
             unit.movementPoints,
             { width: gameState.mapSize, height: gameState.mapSize },
@@ -433,7 +433,7 @@ export class GameScene extends Phaser.Scene {
             }
         } else if (this.selectedUnit) {
             // Check if the clicked hex is within movement range
-            const movementHexes = this.hexGrid.getHexesInRange(
+            const movementHexes = this.hexGrid.getReachableAndVisibleHexes(
                 this.selectedUnit.position,
                 this.selectedUnit.movementPoints,
                 { width: gameState.mapSize, height: gameState.mapSize },
