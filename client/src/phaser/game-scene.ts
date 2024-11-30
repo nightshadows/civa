@@ -414,8 +414,7 @@ export class GameScene extends Phaser.Scene {
                     this.highlightSelectedUnit(clickedUnit);
                     if (clickedUnit.movementPoints > 0) {
                         this.showMovementRange(clickedUnit);
-                        // Also show attack range for the selected unit
-                        this.showAttackRange(clickedUnit, mapData, gameState);
+                        this.showAttackRange(clickedUnit);
                     }
                 }
             } else if (this.selectedUnit && this.selectedUnit.movementPoints > 0) {
@@ -541,21 +540,25 @@ export class GameScene extends Phaser.Scene {
         return false;
     }
 
-    // Add this method to show attack range
-    private showAttackRange(unit: Unit, mapData: TileType[][], gameState: GameState): void {
-        const range = unit.combatType === CombatType.RANGED ? (unit.range || 1) : 1;
-        const hexesInRange = this.hexGrid.getHexesInRange(
-            unit.position,
-            unit.movementPoints,
-            { width: gameState.mapSize, height: gameState.mapSize },
-            mapData
+    private showAttackRange(unit: Unit): void {
+        const gameState = this.registry.get('gameState') as GameState;
+        if (!gameState) return;
+
+        // Get all enemy units
+        const enemyUnits = gameState.visibleUnits.filter(u => 
+            u.playerId !== unit.playerId
         );
-        
-        hexesInRange.forEach(hexPos => {
-            const worldPos = this.view!.hexToWorld(hexPos);
-            const screenPos = this.view!.worldToScreen(worldPos.x, worldPos.y);
-            const highlight = this.drawHexHighlightColor(screenPos.x, screenPos.y, 0xff0000);
-            this.highlightedHexes.push(highlight);
+
+        // Check each enemy unit if it's in attack range
+        enemyUnits.forEach(enemyUnit => {
+            const distance = this.getHexDistance(unit.position, enemyUnit.position);
+            if (this.canAttackTarget(unit, enemyUnit, distance)) {
+                const worldPos = this.view!.hexToWorld(enemyUnit.position);
+                const screenPos = this.view!.worldToScreen(worldPos.x, worldPos.y);
+                // Use red color for attackable units
+                const highlight = this.drawHexHighlightColor(screenPos.x, screenPos.y, 0xff0000);
+                this.highlightedHexes.push(highlight);
+            }
         });
     }
 }
