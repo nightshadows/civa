@@ -1,27 +1,9 @@
 import { Position, TileType } from '@shared/types';
 import { getMovementCost } from '@shared/terrain';
+import { getHexDistance } from '@shared/hex-utils';
 
 export abstract class BaseHexGrid {
     constructor(protected readonly hexSize: number) {}
-
-    // Get the distance between two hex coordinates using cube coordinates
-    getHexDistance(a: Position, b: Position): number {
-        const ac = this.offsetToCube(a);
-        const bc = this.offsetToCube(b);
-
-        return Math.max(
-            Math.abs(ac.x - bc.x),
-            Math.abs(ac.y - bc.y),
-            Math.abs(ac.z - bc.z)
-        );
-    }
-
-    protected offsetToCube(hex: Position): { x: number; y: number; z: number } {
-        const x = hex.x;
-        const z = hex.y - (hex.x + (hex.x & 1)) / 2;
-        const y = -x - z;
-        return { x, y, z };
-    }
 
     getNeighbors(hex: Position): Position[] {
         const directions = hex.x % 2 === 1
@@ -85,4 +67,4 @@ export abstract class BaseHexGrid {
 
         return result;
     }
-} 
+}

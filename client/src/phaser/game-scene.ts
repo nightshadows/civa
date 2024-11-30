@@ -3,6 +3,7 @@ import { HexGrid } from './hex-grid';
 import { UIPanel } from './ui-panel';
 import { View } from './view';
 import { GameActions, GameEventEmitter } from 'src/engine-setup';
+import { getHexDistance } from '@shared/hex-utils';
 
 export class GameScene extends Phaser.Scene {
     private hexSize: number;
@@ -419,9 +420,9 @@ export class GameScene extends Phaser.Scene {
                 }
             } else if (this.selectedUnit && this.selectedUnit.movementPoints > 0) {
                 // Check if target is within attack range
-                const distance = this.getHexDistance(this.selectedUnit.position, clickedUnit.position);
+                const distance = getHexDistance(this.selectedUnit.position, clickedUnit.position);
                 const canAttack = this.canAttackTarget(this.selectedUnit, clickedUnit, distance);
-                
+
                 if (canAttack) {
                     this.gameActions!.attackUnit(this.selectedUnit.id, clickedUnit.id);
                     this.clearSelection();
@@ -523,14 +524,6 @@ export class GameScene extends Phaser.Scene {
         return neighbors.some(n => n.x === pos2.x && n.y === pos2.y);
     }
 
-    private getHexDistance(pos1: Position, pos2: Position): number {
-        return Math.max(
-            Math.abs(pos1.x - pos2.x),
-            Math.abs(pos1.y - pos2.y),
-            Math.abs((pos1.x - pos1.y) - (pos2.x - pos2.y))
-        );
-    }
-
     private canAttackTarget(attacker: Unit, defender: Unit, distance: number): boolean {
         if (attacker.combatType === CombatType.MELEE) {
             return distance === 1;
@@ -545,13 +538,13 @@ export class GameScene extends Phaser.Scene {
         if (!gameState) return;
 
         // Get all enemy units
-        const enemyUnits = gameState.visibleUnits.filter(u => 
+        const enemyUnits = gameState.visibleUnits.filter(u =>
             u.playerId !== unit.playerId
         );
 
         // Check each enemy unit if it's in attack range
         enemyUnits.forEach(enemyUnit => {
-            const distance = this.getHexDistance(unit.position, enemyUnit.position);
+            const distance = getHexDistance(unit.position, enemyUnit.position);
             if (this.canAttackTarget(unit, enemyUnit, distance)) {
                 const worldPos = this.view!.hexToWorld(enemyUnit.position);
                 const screenPos = this.view!.worldToScreen(worldPos.x, worldPos.y);

@@ -3,6 +3,7 @@ import { getStartingUnits, createUnit, resetUnitMovement, isMeleeUnit, canAttack
 import { getMovementCost } from '../../../shared/src/terrain';
 import { AIPlayer } from './ai-player';
 import { PlayerConfig, PlayerType } from './player-types';
+import { getHexDistance } from '../../../shared/src/hex-utils';
 
 export class Game {
     public map: TileType[][];
@@ -361,26 +362,6 @@ export class Game {
         return { success: true };
     }
 
-    private getHexDistance(a: Position, b: Position): number {
-        // Convert to cube coordinates
-        const ac = this.offsetToCube(a);
-        const bc = this.offsetToCube(b);
-
-        // Calculate cube distance
-        return Math.max(
-            Math.abs(ac.x - bc.x),
-            Math.abs(ac.y - bc.y),
-            Math.abs(ac.z - bc.z)
-        );
-    }
-
-    private offsetToCube(hex: Position): { x: number; y: number; z: number } {
-        const x = hex.x;
-        const z = hex.y - (hex.x + (hex.x & 1)) / 2;
-        const y = -x - z;
-        return { x, y, z };
-    }
-
     public fortifyUnit(unitId: string): boolean {
         const unit = this.units.find(u => u.id === unitId);
         if (!unit || unit.movementPoints <= 0) return false;
@@ -570,7 +551,7 @@ export class Game {
         }
 
         // Calculate distance between units
-        const distance = this.getDistance(attacker.position, target.position);
+        const distance = getHexDistance(attacker.position, target.position);
 
         // Check if attack is valid based on unit type and range
         if (!canAttackTarget(attacker, target, distance)) {
@@ -608,15 +589,6 @@ export class Game {
         this.removeDeadUnits();
 
         return { success: true };
-    }
-
-    private getDistance(pos1: Position, pos2: Position): number {
-        // Manhattan distance for hex grid
-        return Math.max(
-            Math.abs(pos1.x - pos2.x),
-            Math.abs(pos1.y - pos2.y),
-            Math.abs((pos1.x - pos1.y) - (pos2.x - pos2.y))
-        );
     }
 
     private removeDeadUnits(): void {
