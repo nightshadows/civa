@@ -1,29 +1,48 @@
 import { Position } from './types';
 
 /**
- * Convert offset coordinates to cube coordinates
- */
-export function offsetToCube(hex: Position): { x: number; y: number; z: number } {
-    const x = hex.x;
-    const z = hex.y - (hex.x + (hex.x & 1)) / 2;
-    const y = -x - z;
-    return { x, y, z };
-}
-
-/**
  * Calculate the distance between two hex tiles using cube coordinates
  */
 export function getHexDistance(pos1: Position, pos2: Position): number {
-    // Convert to cube coordinates first
-    const cube1 = offsetToCube(pos1);
-    const cube2 = offsetToCube(pos2);
+    // use the modified bfs to find the distance
+    // search from the pos where x coordiante is not greater than other
+    // while searching, the x coordinate can not decrease
+    // while searching, the y coordinate can not become lower than minY - 1 or greater than maxY + 1
 
-    // Calculate cube distance
-    return Math.max(
-        Math.abs(cube1.x - cube2.x),
-        Math.abs(cube1.y - cube2.y),
-        Math.abs(cube1.z - cube2.z)
-    );
+    if (pos1.x === pos2.x && pos1.y === pos2.y) {
+        return 0;
+    }
+
+    if (pos1.x > pos2.x) {
+        [pos1, pos2] = [pos2, pos1];
+    }
+
+    const minY = Math.min(pos1.y, pos2.y) - 1;
+    const maxY = Math.max(pos1.y, pos2.y) + 1;
+
+    const visited = new Set<string>();
+    const queue: Array<{ pos: Position, distance: number }> = [
+        { pos: pos1, distance: 0 }
+    ];
+
+    while (queue.length > 0) {
+        const current = queue.shift()!;
+        if (current.pos.x === pos2.x && current.pos.y === pos2.y) {
+            return current.distance;
+        }
+
+        const neighbors = getNeighbors(current.pos);
+        for (const neighbor of neighbors) {
+            if (neighbor.x < current.pos.x) continue;
+            if (neighbor.y < minY || neighbor.y > maxY) continue;
+            const neighborKey = `${neighbor.x},${neighbor.y}`;
+            if (visited.has(neighborKey)) continue;
+            visited.add(neighborKey);
+            queue.push({ pos: neighbor, distance: current.distance + 1 });
+        }
+    }
+
+    return Infinity;
 }
 
 /**
