@@ -497,30 +497,35 @@ export class Game {
             return { success: false, error: 'Target out of range' };
         }
 
+        let damageToTarget = 0;
+        let damageToAttacker = 0;
+
         // Calculate and apply damage based on combat type
         if (isMeleeUnit(attacker)) {
             // Melee combat: both units deal and receive damage
-            const damageToTarget = Math.max(0, attacker.attack - target.defense);
-            const counterDamage = Math.max(0, target.defense - attacker.defense);
+            damageToTarget = Math.max(0, attacker.attack - target.defense);
+            damageToAttacker = Math.max(0, target.defense - attacker.defense);
 
             target.currentHp = Math.max(0, target.currentHp - damageToTarget);
-            attacker.currentHp = Math.max(0, attacker.currentHp - counterDamage);
+            attacker.currentHp = Math.max(0, attacker.currentHp - damageToAttacker);
         } else {
             // Ranged combat: only attacker deals damage
-            const damageToTarget = Math.max(0, attacker.attack - target.defense);
+            damageToTarget = Math.max(0, attacker.attack - target.defense);
             target.currentHp = Math.max(0, target.currentHp - damageToTarget);
         }
 
         // Consume movement points
         attacker.movementPoints = 0;
 
-        // Add to history
+        // Add to history with damage information
         this.addToHistory({
             type: 'ATTACK_UNIT',
             playerId: attacker.playerId,
             payload: {
                 unitId: attackerId,
-                targetId: targetId
+                targetId: targetId,
+                damageDealt: damageToTarget,
+                damageTaken: damageToAttacker
             }
         });
 
@@ -531,6 +536,21 @@ export class Game {
     }
 
     private removeDeadUnits(): void {
+        const deadUnits = this.units.filter(unit => unit.currentHp <= 0);
+
+        // Record each unit death in history
+        deadUnits.forEach(unit => {
+            this.addToHistory({
+                type: 'UNIT_DIED',
+                playerId: unit.playerId,
+                payload: {
+                    unitId: unit.id,
+                    to: unit.position
+                }
+            });
+        });
+
+        // Remove dead units from the game
         this.units = this.units.filter(unit => unit.currentHp > 0);
     }
 }

@@ -61,7 +61,7 @@ export interface GameState {
 }
 
 export interface GameAction {
-    type: 'MOVE_UNIT' | 'END_TURN' | 'FORTIFY_UNIT' | 'ATTACK_UNIT';
+    type: 'MOVE_UNIT' | 'END_TURN' | 'FORTIFY_UNIT' | 'ATTACK_UNIT' | 'UNIT_DIED';
     playerId: string;
     timestamp: number;
     payload?: {
@@ -69,5 +69,7 @@ export interface GameAction {
         targetId?: string;
         from?: Position;
         to?: Position;
+        damageDealt?: number;
+        damageTaken?: number;
     };
 }

@@ -78,11 +78,46 @@ export class UIPanel {
 
         this.createButtons();
 
+        // Create a mask for the move history text
+        const moveHistoryMask = this.scene.add.graphics()
+            .fillStyle(0xffffff)
+            .fillRect(10, baseY + 80, this.scene.game.canvas.width - 20, 60);
+
+        // Create move history text with mask
         this.moveHistoryText = this.scene.add.text(10, baseY + 80, '', {
             fontSize: '12px',
             color: '#ffffff',
-            wordWrap: { width: this.scene.game.canvas.width - 20 }
-        }).setDepth(101);
+            wordWrap: { width: this.scene.game.canvas.width - 40 }
+        })
+        .setDepth(101)
+        .setMask(new Phaser.Display.Masks.GeometryMask(this.scene, moveHistoryMask));
+
+        // Add scrolling interaction
+        this.moveHistoryText.setInteractive();
+        let isDragging = false;
+        let startY = 0;
+
+        this.moveHistoryText.on('pointerdown', (pointer: Phaser.Input.Pointer) => {
+            isDragging = true;
+            startY = pointer.y - this.moveHistoryText.y;
+        });
+
+        this.scene.input.on('pointermove', (pointer: Phaser.Input.Pointer) => {
+            if (!isDragging) return;
+
+            const newY = pointer.y - startY;
+            const maxScroll = -(this.moveHistoryText.height - 60);
+
+            this.moveHistoryText.y = Phaser.Math.Clamp(
+                newY,
+                baseY + 80 + maxScroll,
+                baseY + 80
+            );
+        });
+
+        this.scene.input.on('pointerup', () => {
+            isDragging = false;
+        });
     }
 
     private createButtons() {
@@ -205,19 +240,27 @@ export class UIPanel {
     }
 
     public updateMoveHistory(history: GameAction[]): void {
-        const lastMoves = history.slice(-5).reverse().map(action => {
+        const lastMoves = history.slice(-3).map(action => {
             const time = new Date(action.timestamp).toLocaleTimeString();
             switch (action.type) {
                 case 'MOVE_UNIT':
-                    const to = action.payload?.to;
-                    const from = action.payload?.from;
-                    return `[${time}] Player ${action.playerId} moved unit ${action.payload?.unitId} from (${from?.x},${from?.y}) to (${to?.x},${to?.y})`;
-                case 'END_TURN':
-                    return `[${time}] Player ${action.playerId} ended turn`;
+                    return `Player ${action.playerId} moved unit from (${action.payload?.from?.x},${action.payload?.from?.y}) to (${action.payload?.to?.x},${action.payload?.to?.y})`;
+
+                case 'ATTACK_UNIT':
+                    return `Player ${action.playerId} attacked unit ${action.payload?.targetId} dealing ${action.payload?.damageDealt} damage` +
+                           (action.payload?.damageTaken ? ` and receiving ${action.payload.damageTaken} damage` : '');
+
+                case 'UNIT_DIED':
+                    return `Player ${action.playerId}'s unit was destroyed at (${action.payload?.to?.x},${action.payload?.to?.y})`;
+
                 case 'FORTIFY_UNIT':
-                    return `[${time}] Player ${action.playerId} fortified unit ${action.payload?.unitId}`;
+                    return `Player ${action.playerId} fortified unit ${action.payload?.unitId}`;
+
+                case 'END_TURN':
+                    return `Player ${action.playerId} ended their turn`;
+
                 default:
-                    return '';
+                    return `Unknown action: ${action.type}`;
             }
         });
 
