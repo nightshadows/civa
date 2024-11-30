@@ -244,23 +244,23 @@ export class UIPanel {
             const time = new Date(action.timestamp).toLocaleTimeString();
             switch (action.type) {
                 case 'MOVE_UNIT':
-                    return `Player ${action.playerId} moved unit from (${action.payload?.from?.x},${action.payload?.from?.y}) to (${action.payload?.to?.x},${action.payload?.to?.y})`;
+                    return `[${time}] Player ${action.playerId} moved unit from (${action.payload?.from?.x},${action.payload?.from?.y}) to (${action.payload?.to?.x},${action.payload?.to?.y})`;
 
                 case 'ATTACK_UNIT':
-                    return `Player ${action.playerId} attacked unit ${action.payload?.targetId} dealing ${action.payload?.damageDealt} damage` +
+                    return `[${time}] Player ${action.playerId} attacked unit ${action.payload?.targetId} dealing ${action.payload?.damageDealt} damage` +
                            (action.payload?.damageTaken ? ` and receiving ${action.payload.damageTaken} damage` : '');
 
                 case 'UNIT_DIED':
-                    return `${action.playerId}'s unit ${action.payload?.unitId} was destroyed at (${action.payload?.to?.x},${action.payload?.to?.y})`;
+                    return `[${time}] ${action.playerId}'s unit ${action.payload?.unitId} was destroyed at (${action.payload?.to?.x},${action.payload?.to?.y})`;
 
                 case 'FORTIFY_UNIT':
-                    return `Player ${action.playerId} fortified unit ${action.payload?.unitId}`;
+                    return `[${time}] Player ${action.playerId} fortified unit ${action.payload?.unitId}`;
 
                 case 'END_TURN':
-                    return `Player ${action.playerId} ended their turn`;
+                    return `[${time}] Player ${action.playerId} ended their turn`;
 
                 default:
-                    return `Unknown action: ${action.type}`;
+                    return `[${time}] Unknown action: ${action.type}`;
             }
         });
 
