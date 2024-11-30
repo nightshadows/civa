@@ -240,7 +240,7 @@ export class UIPanel {
     }
 
     public updateMoveHistory(history: GameAction[]): void {
-        const lastMoves = history.slice(-3).map(action => {
+        const lastMoves = history.slice(-3).reverse().map(action => {
             const time = new Date(action.timestamp).toLocaleTimeString();
             switch (action.type) {
                 case 'MOVE_UNIT':
