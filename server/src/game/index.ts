@@ -1,9 +1,9 @@
 import { TileType, Position, Unit, GameState, UnitType, Tile, GameAction } from '@shared/types';
+import { getHexDistance, getHexesInRange, getNeighbors } from '@shared/hex-utils';
 import { getStartingUnits, createUnit, resetUnitMovement, isMeleeUnit, canAttackTarget } from './units';
 import { getMovementCost } from '@shared/terrain';
 import { AIPlayer } from './ai-player';
 import { PlayerConfig, PlayerType } from './player-types';
-import { getHexDistance } from '../../../shared/src/hex-utils';
 
 export class Game {
     public map: TileType[][];
@@ -87,7 +87,7 @@ export class Game {
                     return current;
                 }
 
-                const neighbors = this.getNeighbors(current);
+                const neighbors = getNeighbors(current);
                 for (const neighbor of neighbors) {
                     if (!visited.has(`${neighbor.x},${neighbor.y}`)) {
                         queue.push(neighbor);
@@ -302,7 +302,7 @@ export class Game {
                 return current.path;
             }
 
-            const neighbors = this.getNeighbors(current.pos);
+            const neighbors = getNeighbors(current.pos);
             for (const neighbor of neighbors) {
                 if (!this.isWithinMapBounds(neighbor)) continue;
 
@@ -374,67 +374,6 @@ export class Game {
         return this._gameId;
     }
 
-    public getNeighbors(hex: Position): Position[] {
-        const directions = hex.x % 2 === 1
-            ? [
-                { x: -1, y: 0 },  // top left
-                { x: -1, y: +1 }, // top right
-                { x: 0, y: +1 },  // right
-                { x: 0, y: -1 },  // left
-                { x: 1, y: 0 },   // bottom left
-                { x: 1, y: +1 }   // bottom right
-            ]
-            : [
-                { x: -1, y: -1 }, // top left
-                { x: -1, y: 0 },  // top right
-                { x: 0, y: +1 },  // right
-                { x: 0, y: -1 },  // left
-                { x: +1, y: -1 }, // bottom left
-                { x: +1, y: 0 }   // bottom right
-            ];
-
-        return directions.map(dir => ({
-            x: hex.x + dir.x,
-            y: hex.y + dir.y
-        }));
-    }
-
-    public getHexesInRange(center: Position, movementPoints: number): Position[] {
-        const visited = new Set<string>();
-        const result: Position[] = [];
-        const posToKey = (pos: Position) => `${pos.x},${pos.y}`;
-        const queue: Array<{ pos: Position, moves: number }> = [
-            { pos: center, moves: movementPoints }
-        ];
-
-        while (queue.length > 0) {
-            const current = queue.shift()!;
-            const currentKey = posToKey(current.pos);
-
-            if (visited.has(currentKey)) continue;
-            visited.add(currentKey);
-
-            if (current.pos !== center) {
-                result.push(current.pos);
-            }
-
-            if (current.moves > 0) {
-                const neighbors = this.getNeighbors(current.pos);
-                for (const neighbor of neighbors) {
-                    const neighborKey = posToKey(neighbor);
-                    if (!visited.has(neighborKey)) {
-                        queue.push({
-                            pos: neighbor,
-                            moves: current.moves - 1
-                        });
-                    }
-                }
-            }
-        }
-
-        return result;
-    }
-
     private isWithinMapBounds(position: Position): boolean {
         return position.x >= 0 &&
                position.x < this.mapSize &&
@@ -453,7 +392,7 @@ export class Game {
 
         // Then add tiles in vision range
         playerUnits.forEach(unit => {
-            const tilesInRange = this.getHexesInRange(unit.position, unit.visionRange);
+            const tilesInRange = getHexesInRange(unit.position, unit.visionRange);
             tilesInRange.forEach(pos => {
                 if (this.isWithinMapBounds(pos)) {
                     visibleTiles.add(`${pos.x},${pos.y}`);

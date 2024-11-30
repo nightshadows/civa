@@ -3,6 +3,7 @@ import { Game } from '../game';
 import { GameState, Position, TileType, Unit } from '@shared/types';
 import { getMovementCost } from '@shared/terrain';
 import { PlayerType } from '../game/player-types';
+import { getHexesInRange, getNeighbors } from '@shared/hex-utils';
 
 describe('Game', () => {
     const player1Id = 'player1';
@@ -137,7 +138,7 @@ describe('Game', () => {
             if (!unit) return;
 
             // Find an impassable tile adjacent to the unit
-            const impassableTile = game.getNeighbors(unit.position).find(pos => {
+            const impassableTile = getNeighbors(unit.position).find(pos => {
                 if (pos.x < 0 || pos.x >= game.map[0].length ||
                     pos.y < 0 || pos.y >= game.map.length) {
                     return false;
@@ -160,7 +161,7 @@ describe('Game', () => {
 
 // Helper function to find a valid move for a unit
 function findValidMove(game: Game, unit: Unit): Position | undefined {
-    return game.getHexesInRange(unit.position, 1).find(pos => {
+    return getHexesInRange(unit.position, 1).find(pos => {
         // Check if position is within map bounds
         if (pos.x < 0 || pos.x >= game.map[0].length ||
             pos.y < 0 || pos.y >= game.map.length) {
