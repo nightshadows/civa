@@ -156,7 +156,7 @@ export class GameScene extends Phaser.Scene {
                 // If no unit selected, select first unit with movement
                 this.selectedUnit = unitsWithMovement[0];
                 this.highlightSelectedUnit(unitsWithMovement[0]);
-                this.showMovementRange(unitsWithMovement[0]);
+                this.showAuxInfo(unitsWithMovement[0]);
                 return;
             }
 
@@ -167,12 +167,12 @@ export class GameScene extends Phaser.Scene {
                 // If current unit not found or is last unit, select first unit
                 this.selectedUnit = unitsWithMovement[0];
                 this.highlightSelectedUnit(unitsWithMovement[0]);
-                this.showMovementRange(unitsWithMovement[0]);
+                this.showAuxInfo(unitsWithMovement[0]);
             } else {
                 // Select next unit
                 this.selectedUnit = unitsWithMovement[currentIndex + 1];
                 this.highlightSelectedUnit(unitsWithMovement[currentIndex + 1]);
-                this.showMovementRange(unitsWithMovement[currentIndex + 1]);
+                this.showAuxInfo(unitsWithMovement[currentIndex + 1]);
             }
         });
     }
@@ -279,7 +279,7 @@ export class GameScene extends Phaser.Scene {
             if (updatedUnit) {
                 this.selectedUnit = updatedUnit;
                 this.highlightSelectedUnit(updatedUnit);
-                this.showMovementRange(updatedUnit);
+                this.showAuxInfo(updatedUnit);
             } else {
                 this.selectedUnit = null;
             }
@@ -293,6 +293,10 @@ export class GameScene extends Phaser.Scene {
 
     private showMovementRange(unit: Unit): void {
         this.clearHighlights();
+
+        if (unit.movementPoints === 0) return;
+
+        // Show movement range
         const gameState = this.registry.get('gameState') as GameState;
         const mapData = gameState.visibleTiles.reduce((acc: TileType[][], tile) => {
             if (!acc[tile.position.y]) acc[tile.position.y] = [];
@@ -414,8 +418,7 @@ export class GameScene extends Phaser.Scene {
                     this.selectedUnit = clickedUnit;
                     this.highlightSelectedUnit(clickedUnit);
                     if (clickedUnit.movementPoints > 0) {
-                        this.showMovementRange(clickedUnit);
-                        this.showAttackRange(clickedUnit);
+                        this.showAuxInfo(clickedUnit);
                     }
                 }
             } else if (this.selectedUnit && this.selectedUnit.movementPoints > 0) {
@@ -497,6 +500,19 @@ export class GameScene extends Phaser.Scene {
         this.uiPanel!.updateTurnInfo(state.currentPlayerId, state.playerId, state.turnNumber);
         this.uiPanel!.updatePlayerList(state);
         this.uiPanel?.updateMoveHistory(state.moveHistory);
+
+        // Update highlight position if there's a selected unit
+        if (this.selectedUnit) {
+            const updatedUnit = state.visibleUnits.find(u => u.id === this.selectedUnit!.id);
+            if (updatedUnit) {
+                this.selectedUnit = updatedUnit; // Update the selected unit reference
+                this.highlightSelectedUnit(updatedUnit);
+                this.showAuxInfo(updatedUnit);
+            } else {
+                // Unit is no longer visible or was removed
+                this.clearSelection();
+            }
+        }
     }
 
     preload() {
@@ -537,6 +553,8 @@ export class GameScene extends Phaser.Scene {
         const gameState = this.registry.get('gameState') as GameState;
         if (!gameState) return;
 
+        if (unit.movementPoints === 0) return;
+
         // Get all enemy units
         const enemyUnits = gameState.visibleUnits.filter(u =>
             u.playerId !== unit.playerId
@@ -553,5 +571,10 @@ export class GameScene extends Phaser.Scene {
                 this.highlightedHexes.push(highlight);
             }
         });
+    }
+
+    private showAuxInfo(unit: Unit): void {
+        this.showMovementRange(unit);
+        this.showAttackRange(unit);
     }
 }
