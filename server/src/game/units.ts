@@ -1,18 +1,21 @@
-import { Position, Unit, UnitType } from '../../../shared/src/types';
+import { Position, Unit, UnitType, CombatType } from '../../../shared/src/types';
 
 interface UnitTemplate {
     type: UnitType;
+    combatType: CombatType;
     movementPoints: number;
     visionRange: number;
     maxHp: number;
     baseAttack: number;
     baseDefense: number;
     expNeededBase: number;
+    range?: number;
 }
 
 const UNIT_TEMPLATES: Record<UnitType, UnitTemplate> = {
     [UnitType.WARRIOR]: {
         type: UnitType.WARRIOR,
+        combatType: CombatType.MELEE,
         movementPoints: 2,
         visionRange: 4,
         maxHp: 100,
@@ -22,12 +25,14 @@ const UNIT_TEMPLATES: Record<UnitType, UnitTemplate> = {
     },
     [UnitType.ARCHER]: {
         type: UnitType.ARCHER,
+        combatType: CombatType.RANGED,
         movementPoints: 2,
         visionRange: 4,
         maxHp: 75,
         baseAttack: 20,
         baseDefense: 5,
-        expNeededBase: 100
+        expNeededBase: 100,
+        range: 2
     }
 };
 
@@ -36,6 +41,7 @@ export function createUnit(type: UnitType, playerId: string, position: Position)
     return {
         id: `${type.toLowerCase()}-${playerId}`,
         type: template.type,
+        combatType: template.combatType,
         position,
         playerId,
         movementPoints: template.movementPoints,
@@ -46,7 +52,8 @@ export function createUnit(type: UnitType, playerId: string, position: Position)
         expNeeded: template.expNeededBase,
         level: 1,
         attack: template.baseAttack,
-        defense: template.baseDefense
+        defense: template.baseDefense,
+        range: template.range
     };
 }
 
@@ -63,4 +70,21 @@ export function getStartingUnits(playerId: string, basePosition: Position): Unit
             y: basePosition.y + 1
         })
     ];
+}
+
+export function isMeleeUnit(unit: Unit): boolean {
+    return unit.combatType === CombatType.MELEE;
+}
+
+export function isRangedUnit(unit: Unit): boolean {
+    return unit.combatType === CombatType.RANGED;
+}
+
+export function canAttackTarget(attacker: Unit, defender: Unit, distance: number): boolean {
+    if (isMeleeUnit(attacker)) {
+        return distance === 1;
+    } else if (isRangedUnit(attacker)) {
+        return distance <= (attacker.range || 1);
+    }
+    return false;
 }

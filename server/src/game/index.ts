@@ -1,5 +1,5 @@
 import { TileType, Position, Unit, GameState, UnitType, Tile, GameAction } from '../../../shared/src/types';
-import { getStartingUnits, createUnit, resetUnitMovement } from './units';
+import { getStartingUnits, createUnit, resetUnitMovement, isMeleeUnit, canAttackTarget } from './units';
 import { getMovementCost } from '../../../shared/src/terrain';
 import { AIPlayer } from './ai-player';
 import { PlayerConfig, PlayerType } from './player-types';
@@ -569,17 +569,27 @@ export class Game {
             return { success: false, error: 'Cannot attack own unit' };
         }
 
-        // Check if units are adjacent for melee attack
-        if (!this.areUnitsAdjacent(attacker.position, target.position)) {
-            return { success: false, error: 'Target not in range' };
+        // Calculate distance between units
+        const distance = this.getDistance(attacker.position, target.position);
+
+        // Check if attack is valid based on unit type and range
+        if (!canAttackTarget(attacker, target, distance)) {
+            return { success: false, error: 'Target out of range' };
         }
 
-        // Calculate and apply damage
-        const damageToTarget = attacker.attack;
-        const counterDamage = target.defense;
+        // Calculate and apply damage based on combat type
+        if (isMeleeUnit(attacker)) {
+            // Melee combat: both units deal and receive damage
+            const damageToTarget = Math.max(0, attacker.attack - target.defense);
+            const counterDamage = Math.max(0, target.defense - attacker.defense);
 
-        target.currentHp = Math.max(0, target.currentHp - damageToTarget);
-        attacker.currentHp = Math.max(0, attacker.currentHp - counterDamage);
+            target.currentHp = Math.max(0, target.currentHp - damageToTarget);
+            attacker.currentHp = Math.max(0, attacker.currentHp - counterDamage);
+        } else {
+            // Ranged combat: only attacker deals damage
+            const damageToTarget = Math.max(0, attacker.attack - target.defense);
+            target.currentHp = Math.max(0, target.currentHp - damageToTarget);
+        }
 
         // Consume movement points
         attacker.movementPoints = 0;
@@ -600,9 +610,13 @@ export class Game {
         return { success: true };
     }
 
-    private areUnitsAdjacent(pos1: Position, pos2: Position): boolean {
-        const neighbors = this.getNeighbors(pos1);
-        return neighbors.some(n => n.x === pos2.x && n.y === pos2.y);
+    private getDistance(pos1: Position, pos2: Position): number {
+        // Manhattan distance for hex grid
+        return Math.max(
+            Math.abs(pos1.x - pos2.x),
+            Math.abs(pos1.y - pos2.y),
+            Math.abs((pos1.x - pos1.y) - (pos2.x - pos2.y))
+        );
     }
 
     private removeDeadUnits(): void {

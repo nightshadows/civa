@@ -10,6 +10,11 @@ export enum UnitType {
     ARCHER = 'ARCHER',
 }
 
+export enum CombatType {
+    MELEE = 'MELEE',
+    RANGED = 'RANGED',
+}
+
 export interface Position {
     x: number;
     y: number;
@@ -23,6 +28,7 @@ export interface Tile {
 export interface Unit {
     id: string;
     type: UnitType;
+    combatType: CombatType;
     position: Position;
     playerId: string;
     movementPoints: number;
@@ -34,6 +40,13 @@ export interface Unit {
     level: number;
     attack: number;
     defense: number;
+    range?: number;
+}
+
+export interface CombatStats {
+    attack: number;
+    defense: number;
+    range?: number;
 }
 
 export interface GameState {
