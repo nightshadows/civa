@@ -128,7 +128,8 @@ export class CloudflareGameServer extends GameServerBase {
     try {
       if (parts[0] === 'api') {
         let body = undefined;
-        if (request.method !== 'GET' && request.headers.get('Content-Length') !== '0') {
+        const contentLength = request.headers.get('Content-Length');
+        if (request.method !== 'GET' && contentLength !== '0' && contentLength !== null) {
           try {
             body = await request.json();
           } catch (e) {
