@@ -67,7 +67,7 @@ const updateGamesList = async () => {
         );
 
         container.innerHTML = games.map((gameId, index) => {
-            const gameState = gameStates[index];
+            const gameState = gameStates[index].gameState;
             const isPlayerInGame = gameState.players.includes(player.id);
             return `
             <div class="game-item">

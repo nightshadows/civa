@@ -92,7 +92,7 @@ export abstract class GameServerBase {
                         }
 
                         const gameState = game.getVisibleState(player.id);
-                        return gameState;
+                        return { gameState };
                     }
                     // List games
                     const player = await this.getPlayerFromRequest(request);
@@ -109,10 +109,6 @@ export abstract class GameServerBase {
                         .filter(gameId => {
                             const game = this.gameManager.games.get(gameId);
                             if (!game) return false;
-
-                            // Include the game if:
-                            // 1. It's not full, OR
-                            // 2. The player is already in it
                             return !game.canAddPlayer() ? game.hasPlayer(player.id) : true;
                         });
                     return { games };

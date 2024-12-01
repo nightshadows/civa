@@ -7,7 +7,7 @@ export interface ApiClient {
     listGames(): Promise<string[]>;
     createGame(gameId: string): Promise<void>;
     deleteGame(gameId: string): Promise<void>;
-    getGameState(gameId: string): Promise<GameState>;
+    getGameState(gameId: string): Promise<{ gameState: GameState }>;
 }
 
 export interface Player {
@@ -119,7 +119,7 @@ export class RestApiClient implements ApiClient {
         }
     }
 
-    async getGameState(gameId: string): Promise<GameState> {
+    async getGameState(gameId: string): Promise<{ gameState: GameState }> {
         const response = await fetch(`${config.apiUrl}/${API_BASE}/games/${gameId}/state`, {
             method: 'GET',
             credentials: 'include',
