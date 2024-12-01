@@ -72,8 +72,8 @@ export abstract class GameServerBase {
         switch (method) {
             case 'GET':
                 if (parts[1] === 'games') {
-                    if (parts[2] && parts[3] === 'state') {
-                        // Get game state
+                    if (parts[2] && parts[3] === 'info') {
+                        // Get game info
                         const gameId = parts[2];
                         const player = await this.getPlayerFromRequest(request);
                         if (!player) {
@@ -91,8 +91,11 @@ export abstract class GameServerBase {
                             };
                         }
 
-                        const gameState = game.getVisibleState(player.id);
-                        return { gameState };
+                        return {
+                            maxPlayers: game.getMaxPlayers(),
+                            currentPlayers: game.getPlayers().length,
+                            players: game.getPlayers().map(p => p.id)
+                        };
                     }
                     // List games
                     const player = await this.getPlayerFromRequest(request);
@@ -104,14 +107,32 @@ export abstract class GameServerBase {
                     }
 
                     const allGames = await this.storage.list({ prefix: 'game:' });
-                    const games = Array.from(allGames.keys())
+                    const gamesList = Array.from(allGames.keys())
                         .map(key => key.toString().replace('game:', ''))
                         .filter(gameId => {
                             const game = this.gameManager.games.get(gameId);
                             if (!game) return false;
+
+                            // Include the game if:
+                            // 1. It's not full, OR
+                            // 2. The player is already in it
                             return !game.canAddPlayer() ? game.hasPlayer(player.id) : true;
                         });
-                    return { games };
+
+                    // Get game info for each game
+                    const gameStates = gamesList.reduce((acc, gameId) => {
+                        const game = this.gameManager.games.get(gameId);
+                        if (game) {
+                            acc[gameId] = {
+                                maxPlayers: game.getMaxPlayers(),
+                                currentPlayers: game.getPlayers().length,
+                                players: game.getPlayers().map(p => p.id)
+                            };
+                        }
+                        return acc;
+                    }, {} as Record<string, any>);
+
+                    return { games: gamesList, gameStates };
                 }
                 if (parts[1] === 'player') {
                     const player = await this.getPlayerFromRequest(request);

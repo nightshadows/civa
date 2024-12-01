@@ -15,15 +15,15 @@ toggle3dCheckbox.checked = use3D;
 toggle3dCheckbox.addEventListener('change', (e) => {
     const is3dMode = (e.target as HTMLInputElement).checked;
     const url = new URL(window.location.href);
-    
+
     if (is3dMode) {
         url.searchParams.set('3d', '');
     } else {
         url.searchParams.delete('3d');
     }
-    
+
     window.history.replaceState({}, '', url.toString());
-    
+
     // Update all game links
     document.querySelectorAll('.join-button').forEach(button => {
         const gameId = button.getAttribute('data-gameid');
@@ -87,23 +87,18 @@ const updateGamesList = async () => {
             return;
         }
 
-        const games = await api.listGames();
+        const { games, gameStates } = await api.listGames();
         const container = document.getElementById('gamesContainer');
         if (!container) return;
 
-        // Fetch all game states in parallel
-        const gameStates = await Promise.all(
-            games.map(gameId => api.getGameState(gameId))
-        );
-
-        container.innerHTML = games.map((gameId, index) => {
-            const gameState = gameStates[index].gameState;
-            const isPlayerInGame = gameState.players.includes(player.id);
+        container.innerHTML = games.map(gameId => {
+            const gameInfo = gameStates[gameId];
+            const isPlayerInGame = gameInfo.players.includes(player.id);
             return `
             <div class="game-item">
                 <div class="game-info">
                     <span>Game: ${gameId}</span>
-                    <span class="player-count">(${gameState.players.length}/${gameState.maxPlayers} players)</span>
+                    <span class="player-count">(${gameInfo.currentPlayers}/${gameInfo.maxPlayers} players)</span>
                 </div>
                 <div class="button-group">
                     ${isPlayerInGame ? `

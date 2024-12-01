@@ -1,11 +1,17 @@
 import { config } from './config';
 import { GameState } from '@shared/types';
 
+export interface GameInfo {
+    maxPlayers: number;
+    currentPlayers: number;
+    players: string[];
+}
+
 export interface ApiClient {
-    listGames(): Promise<string[]>;
+    listGames(): Promise<{ games: string[], gameStates: Record<string, GameInfo> }>;
     createGame(gameId: string): Promise<void>;
     deleteGame(gameId: string): Promise<void>;
-    getGameState(gameId: string): Promise<{ gameState: GameState }>;
+    getGameInfo(gameId: string): Promise<GameInfo>;
 }
 
 export interface Player {
@@ -16,15 +22,14 @@ export interface Player {
 }
 
 export class RestApiClient implements ApiClient {
-    async listGames(): Promise<string[]> {
+    async listGames(): Promise<{ games: string[], gameStates: Record<string, GameInfo> }> {
         const response = await fetch(`${config.apiUrl}/games`, {
             method: 'GET',
             credentials: 'include',
             headers: { 'Content-Type': 'application/json' },
         });
         if (!response.ok) throw new Error('Failed to list games');
-        const data = await response.json();
-        return data.games;
+        return await response.json();
     }
 
     async createGame(gameId: string): Promise<void> {
@@ -56,6 +61,16 @@ export class RestApiClient implements ApiClient {
                     throw new Error('Failed to delete game');
             }
         }
+    }
+
+    async getGameInfo(gameId: string): Promise<GameInfo> {
+        const response = await fetch(`${config.apiUrl}/games/${gameId}/info`, {
+            method: 'GET',
+            credentials: 'include',
+            headers: { 'Content-Type': 'application/json' },
+        });
+        if (!response.ok) throw new Error('Failed to get game info');
+        return await response.json();
     }
 
     async getPlayer(): Promise<Player | null> {
@@ -115,15 +130,5 @@ export class RestApiClient implements ApiClient {
         if (!response.ok) {
             throw new Error('Logout failed');
         }
-    }
-
-    async getGameState(gameId: string): Promise<{ gameState: GameState }> {
-        const response = await fetch(`${config.apiUrl}/games/${gameId}/state`, {
-            method: 'GET',
-            credentials: 'include',
-            headers: { 'Content-Type': 'application/json' },
-        });
-        if (!response.ok) throw new Error('Failed to get game state');
-        return await response.json();
     }
 }
