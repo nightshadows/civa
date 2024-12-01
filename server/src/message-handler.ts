@@ -176,7 +176,7 @@ export async function handleJoinGame(
 
     // Get all other players in the game
     const otherPlayers = game.getPlayers().filter(pid => pid.id !== playerId);
-    
+
     // Send current player's info to all other players
     for (const otherPlayer of otherPlayers) {
       const otherPlayerWs = wsManager.getSocketFromPlayer(otherPlayer.id);

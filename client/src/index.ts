@@ -142,7 +142,9 @@ const updateGamesList = async () => {
 // Create game button handler
 document.getElementById('createGame')?.addEventListener('click', async () => {
     const newGameId = generateGameId();
-    await api.createGame(newGameId);
+    const addAiPlayer = (document.getElementById('addAiPlayer') as HTMLInputElement).checked;
+
+    await api.createGame(newGameId, addAiPlayer);
     window.location.href = `game.html?gameId=${newGameId}${use3D ? '&3d' : ''}`;
 });
 

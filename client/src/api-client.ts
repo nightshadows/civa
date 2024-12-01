@@ -9,7 +9,7 @@ export interface GameInfo {
 
 export interface ApiClient {
     listGames(): Promise<{ games: string[], gameStates: Record<string, GameInfo> }>;
-    createGame(gameId: string): Promise<void>;
+    createGame(gameId: string, addAiPlayer?: boolean): Promise<void>;
     deleteGame(gameId: string): Promise<void>;
     getGameInfo(gameId: string): Promise<GameInfo>;
 }
@@ -32,12 +32,12 @@ export class RestApiClient implements ApiClient {
         return await response.json();
     }
 
-    async createGame(gameId: string): Promise<void> {
+    async createGame(gameId: string, addAiPlayer: boolean = false): Promise<void> {
         const response = await fetch(`${config.apiUrl}/games`, {
             method: 'POST',
             credentials: 'include',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ gameId })
+            body: JSON.stringify({ gameId, addAiPlayer })
         });
         if (!response.ok) throw new Error('Failed to create game');
     }

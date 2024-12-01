@@ -269,20 +269,30 @@ export class Game {
         });
 
         this.currentPlayerIndex = (this.currentPlayerIndex + 1) % this.players.length;
+        const nextPlayerId = this.players[this.currentPlayerIndex];
 
         if (this.currentPlayerIndex === 0) {
             this.turnNumber++;
         }
 
-        // Reset movement points for new player's units
+        // Reset movement points for the player who just ended their turn
         this.units
             .filter(unit => unit.playerId === currentPlayerId)
             .forEach(resetUnitMovement);
 
+        // check if we have a Human player in the game:
+        const humanPlayer = this.getPlayers().find(p => p.type === PlayerType.HUMAN);
+        if (!humanPlayer) {
+            throw new Error('No human player found in the game');
+        }
+
         // If it's an AI's turn, let them play immediately
-        const aiPlayer = this.aiPlayers.get(currentPlayerId);
-        if (aiPlayer) {
-            aiPlayer.takeTurn(this);
+        const nextPlayerConfig = this.getPlayers().find(p => p.id === nextPlayerId);
+        if (nextPlayerConfig?.type === PlayerType.AI) {
+            const aiPlayer = this.aiPlayers.get(nextPlayerId);
+            if (aiPlayer) {
+                aiPlayer.takeTurn(this);
+            }
         }
     }
 
