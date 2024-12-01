@@ -49,6 +49,9 @@ export class CloudflareGameServer extends GameServerBase {
     private state: DurableObjectState,
     private env: Env
   ) {
+    if (!env.JWT_SECRET) {
+      throw new Error('JWT_SECRET environment variable is not set');
+    }
     const storage = new CloudflareStorage(state.storage);
     super(storage);
   }
@@ -205,6 +208,9 @@ export class CloudflareGameServer extends GameServerBase {
   }
 
   protected async createSessionToken(playerId: string): Promise<string> {
+    if (!this.env.JWT_SECRET) {
+      throw new Error('JWT_SECRET is required for token creation');
+    }
     return createSessionToken(playerId, this.env.JWT_SECRET);
   }
 
