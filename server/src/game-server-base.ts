@@ -93,7 +93,7 @@ export abstract class GameServerBase {
 
                         return {
                             players: game.getPlayers(),
-                            MAX_PLAYERS: game.MAX_PLAYERS
+                            maxPlayers: game.getMaxPlayers()
                         };
                     }
                     // List games

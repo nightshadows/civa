@@ -72,7 +72,7 @@ const updateGamesList = async () => {
             <div class="game-item">
                 <div class="game-info">
                     <span>Game: ${gameId}</span>
-                    <span class="player-count">(${gameState.players.length}/${gameState.MAX_PLAYERS} players)</span>
+                    <span class="player-count">(${gameState.players.length}/${gameState.maxPlayers} players)</span>
                 </div>
                 <div class="button-group">
                     <button class="join-button" data-gameid="${gameId}">Join Game</button>

@@ -11,7 +11,8 @@ export class Game {
     private players: string[];
     private currentPlayerIndex: number;
     private mapSize: number;
-    private readonly _MAX_PLAYERS = 2;
+    private readonly MAX_PLAYERS = 2;
+    private maxPlayers: number;
     private _gameId: string;
     private turnNumber: number = 1;
     private aiPlayers: Map<string, AIPlayer> = new Map();
@@ -21,6 +22,7 @@ export class Game {
         this.mapSize = mapSize;
         this._gameId = gameId;
         this.currentPlayerIndex = 0;
+        this.maxPlayers = this.MAX_PLAYERS;
         this.map = fixedMap || this.generateMap();
         this.units = [];
         this.moveHistory = [];
@@ -42,7 +44,7 @@ export class Game {
     }
 
     public canAddPlayer(): boolean {
-        return this.players.length < this._MAX_PLAYERS;
+        return this.players.length < this.getMaxPlayers();
     }
 
     public addPlayer(player: PlayerConfig): boolean {
@@ -246,12 +248,12 @@ export class Game {
             playerId,
             currentPlayerId: this.players[this.currentPlayerIndex],
             players: this.players,
-            maxPlayers: this.MAX_PLAYERS,
             visibleTiles,
             visibleUnits,
             mapSize: this.mapSize,
             turnNumber: this.turnNumber,
-            moveHistory: this.moveHistory
+            moveHistory: this.moveHistory,
+            maxPlayers: this.maxPlayers
         };
     }
 
@@ -375,10 +377,6 @@ export class Game {
         return this._gameId;
     }
 
-    public get MAX_PLAYERS(): number {
-        return this._MAX_PLAYERS;
-    }
-
     private isWithinMapBounds(position: Position): boolean {
         return position.x >= 0 &&
                position.x < this.mapSize &&
@@ -432,7 +430,8 @@ export class Game {
             mapSize: this.mapSize,
             turnNumber: this.turnNumber,
             gameId: this._gameId,
-            moveHistory: this.moveHistory
+            moveHistory: this.moveHistory,
+            maxPlayers: this.maxPlayers
         };
     }
 
@@ -452,6 +451,7 @@ export class Game {
         game.currentPlayerIndex = data.currentPlayerIndex;
         game.turnNumber = data.turnNumber;
         game.moveHistory = data.moveHistory || [];
+        game.maxPlayers = data.maxPlayers || game.MAX_PLAYERS;
         return game;
     }
 
@@ -464,6 +464,10 @@ export class Game {
             id: playerId,
             type: this.aiPlayers.has(playerId) ? PlayerType.AI : PlayerType.HUMAN
         }));
+    }
+
+    public getMaxPlayers(): number {
+        return this.maxPlayers;
     }
 
     private addToHistory(action: Omit<GameAction, 'timestamp'>) {
