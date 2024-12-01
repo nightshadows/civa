@@ -404,6 +404,7 @@ export class GameScene extends Phaser.Scene {
             `Screen: (${Math.round(pointer.x)}, ${Math.round(pointer.y)})\n` +
             `World: (${Math.round(worldPos.x)}, ${Math.round(worldPos.y)})\n` +
             `Hex: (${clickedHexPos.x}, ${clickedHexPos.y})\n` +
+            `Distance: ${getHexDistance(clickedHexPos, this.selectedUnit?.position || clickedHexPos)}\n` +
             `View: (${this.view!.getPosition().x}, ${this.view!.getPosition().y})`
         );
 
