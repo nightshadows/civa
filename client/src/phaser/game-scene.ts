@@ -457,7 +457,6 @@ export class GameScene extends Phaser.Scene {
 
                 if (canAttack) {
                     this.gameActions!.attackUnit(this.selectedUnit.id, clickedUnit.id);
-                    this.clearSelection();
                 }
             }
         } else if (this.selectedUnit) {
