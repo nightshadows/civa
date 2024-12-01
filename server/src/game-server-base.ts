@@ -91,10 +91,8 @@ export abstract class GameServerBase {
                             };
                         }
 
-                        return {
-                            players: game.getPlayers(),
-                            maxPlayers: game.getMaxPlayers()
-                        };
+                        const gameState = game.getVisibleState(player.id);
+                        return gameState;
                     }
                     // List games
                     const player = await this.getPlayerFromRequest(request);

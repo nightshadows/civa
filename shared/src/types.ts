@@ -58,6 +58,7 @@ export interface GameState {
     mapSize: number;
     turnNumber: number;
     moveHistory: GameAction[];
+    maxPlayers: number;
 }
 
 export interface GameAction {
