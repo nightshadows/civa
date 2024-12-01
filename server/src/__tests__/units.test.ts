@@ -15,8 +15,8 @@ describe('Unit Management', () => {
                 position,
                 movementPoints: 2,
                 visionRange: 4,
-                maxHp: 100,
-                currentHp: 100,
+                maxHp: 60,
+                currentHp: 60,
                 level: 1
             });
         });
@@ -29,8 +29,8 @@ describe('Unit Management', () => {
                 position,
                 movementPoints: 2,
                 visionRange: 4,
-                maxHp: 75,
-                currentHp: 75,
+                maxHp: 40,
+                currentHp: 40,
                 level: 1
             });
         });
