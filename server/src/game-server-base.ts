@@ -168,11 +168,11 @@ export abstract class GameServerBase {
                     return { success: true };
                 }
                 if (parts[1] === 'logout') {
+                    const expiredToken = '';
                     return {
                         success: true,
                         headers: {
-                            'Set-Cookie': 'session=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/; secure; httponly; samesite=strict',
-                            'Access-Control-Allow-Credentials': 'true'
+                            'Set-Cookie': this.createSessionCookie(expiredToken)
                         }
                     };
                 }

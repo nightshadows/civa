@@ -123,10 +123,15 @@ function base64UrlToUint8Array(base64Url: string): Uint8Array {
 }
 
 export function createSessionCookie(token: string): string {
+    // If token is empty, set an expired date
+    const expires = token 
+        ? new Date(Date.now() + SESSION_DURATION).toUTCString()
+        : 'Thu, 01 Jan 1970 00:00:00 UTC';
+
     return `session=${token}; `
         + 'Path=/; '
         + 'HttpOnly; '
         + 'Secure; '
         + 'SameSite=None; '
-        + `Expires=${new Date(Date.now() + SESSION_DURATION).toUTCString()}`;
+        + `Expires=${expires}`;
 } 
