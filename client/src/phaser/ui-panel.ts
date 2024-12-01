@@ -227,24 +227,32 @@ export class UIPanel {
         window.location.href = '/';
     }
 
-    public updatePlayerList(gameState: GameState) {
-        const players = gameState.players.map(id => {
+    public updatePlayerList(
+        gameState: GameState, 
+        players: Map<string, { name: string; type: string }>
+    ) {
+        console.log('updatePlayerList', gameState, players);
+        const playerList = gameState.players.map(id => {
+            const playerInfo = players.get(id);
+            const displayName = playerInfo?.name || id; // Fallback to ID if name not found
             const isCurrentPlayer = id === gameState.currentPlayerId;
             const isMe = id === gameState.playerId;
-            return `${isMe ? 'You' : id }${isCurrentPlayer ? ' (*)' : ''}`;
+            return `${isMe ? 'You' : displayName}${isCurrentPlayer ? ' (*)' : ''}`;
         });
 
         this.playerList.setText(
-            'Players:\n' + players.join('\n')
+            'Players:\n' + playerList.join('\n')
         );
     }
 
     public updateMoveHistory(history: GameAction[]): void {
         const lastMoves = history.slice(-3).reverse().map(action => {
             const time = new Date(action.timestamp).toLocaleTimeString();
+            const playerId = action.playerId;
+            
             switch (action.type) {
                 case 'MOVE_UNIT':
-                    return `[${time}] Player ${action.playerId} moved unit from (${action.payload?.from?.x},${action.payload?.from?.y}) to (${action.payload?.to?.x},${action.payload?.to?.y})`;
+                    return `[${time}] ${playerId} moved unit from (${action.payload?.from?.x},${action.payload?.from?.y}) to (${action.payload?.to?.x},${action.payload?.to?.y})`;
 
                 case 'ATTACK_UNIT':
                     return `[${time}] Player ${action.playerId} attacked unit ${action.payload?.targetId} dealing ${action.payload?.damageDealt} damage` +

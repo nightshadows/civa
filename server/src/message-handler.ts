@@ -150,54 +150,57 @@ export async function handleJoinGame(
   }
 
   const game = gameManager.games.get(gameId)!;
-  if (!game.hasPlayer(playerId)) {
-    if (game.canAddPlayer()) {
-      game.addPlayer({ id: playerId, type: PlayerType.HUMAN });
-      gameManager.playerSessions.set(playerId, gameId);
-      console.log(`Added player ${playerId} to game ${gameId}`);
+  const isReconnecting = game.hasPlayer(playerId);
+  gameManager.playerSessions.set(playerId, gameId);
 
-      try {
-        // Fetch details for the joining player
-        const joiningPlayer = await storage.get({ prefix: `player:${playerId}` });
-        const joiningPlayerDetails = {
-          id: playerId,
-          name: joiningPlayer?.name || playerId,
-          type: PlayerType.HUMAN
-        };
+  try {
+    // Fetch details for the current player
+    const currentPlayer = await storage.get({ prefix: `player:${playerId}` });
+    const currentPlayerDetails = {
+      id: playerId,
+      name: currentPlayer?.name || playerId,
+      type: PlayerType.HUMAN
+    };
 
-        // Get existing players (excluding the joining player)
-        const existingPlayers = game.getPlayers().filter(pid => pid.id !== playerId);
-        
-        // Fetch details for existing players
-        for (const existingPlayer of existingPlayers) {
-          const storedPlayer = await storage.get({ prefix: `player:${existingPlayer.id}` });
-          const existingPlayerDetails = {
-            id: existingPlayer.id,
-            name: storedPlayer?.name || existingPlayer.id,
-            type: PlayerType.HUMAN
-          };
-
-          // Send existing player info to joining player
-          const joiningPlayerWs = wsManager.getSocketFromPlayer(playerId);
-          if (joiningPlayerWs?.readyState === 1) {
-            joiningPlayerWs.send(JSON.stringify(createPlayerJoinedMessage(existingPlayerDetails)));
-          }
-
-          // Send joining player info to existing player
-          const existingPlayerWs = wsManager.getSocketFromPlayer(existingPlayer.id);
-          if (existingPlayerWs?.readyState === 1) {
-            existingPlayerWs.send(JSON.stringify(createPlayerJoinedMessage(joiningPlayerDetails)));
-          }
-        }
-      } catch (error) {
-        console.error(`Failed to fetch player details for ${playerId}:`, error);
+    if (!isReconnecting) {
+      // New player joining
+      if (game.canAddPlayer()) {
+        game.addPlayer({ id: playerId, type: PlayerType.HUMAN });
+        console.log(`Added player ${playerId} to game ${gameId}`);
+      } else {
+        return { game: null, error: 'Game is full' };
       }
     } else {
-      return { game: null, error: 'Game is full' };
+      console.log(`Player ${playerId} reconnected to game ${gameId}`);
     }
-  } else {
-    gameManager.playerSessions.set(playerId, gameId);
-    console.log(`Updated session for player ${playerId} in game ${gameId}`);
+
+    // Get all other players in the game
+    const otherPlayers = game.getPlayers().filter(pid => pid.id !== playerId);
+    
+    // Send current player's info to all other players
+    for (const otherPlayer of otherPlayers) {
+      const otherPlayerWs = wsManager.getSocketFromPlayer(otherPlayer.id);
+      if (otherPlayerWs?.readyState === 1) {
+        otherPlayerWs.send(JSON.stringify(createPlayerJoinedMessage(currentPlayerDetails)));
+      }
+    }
+
+    // Send all other players' info to current player
+    const currentPlayerWs = wsManager.getSocketFromPlayer(playerId);
+    if (currentPlayerWs?.readyState === 1) {
+      for (const otherPlayer of otherPlayers) {
+        const storedPlayer = await storage.get({ prefix: `player:${otherPlayer.id}` });
+        const otherPlayerDetails = {
+          id: otherPlayer.id,
+          name: storedPlayer?.name || otherPlayer.id,
+          type: PlayerType.HUMAN
+        };
+        currentPlayerWs.send(JSON.stringify(createPlayerJoinedMessage(otherPlayerDetails)));
+      }
+    }
+
+  } catch (error) {
+    console.error(`Failed to handle player join/reconnect for ${playerId}:`, error);
   }
 
   return { game };

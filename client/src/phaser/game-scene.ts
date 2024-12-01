@@ -20,6 +20,7 @@ export class GameScene extends Phaser.Scene {
     private gameEvents?: GameEventEmitter;
     private boundHandleGameState?: (state: GameState) => void;
     private uiPanelHeight: number = 150;
+    private players: Map<string, { name: string; type: string }> = new Map();
 
     constructor() {
         super({ key: 'GameScene' });
@@ -67,6 +68,21 @@ export class GameScene extends Phaser.Scene {
         this.load.once('complete', () => {
             data.onReady();
         });
+
+        // Add handler for player_joined event
+        this.gameEvents.on('player_joined', (message) => {
+            if (message.player) {
+                this.players.set(message.player.id, {
+                    name: message.player.name,
+                    type: message.player.type
+                });
+                // Update UI if we have a game state
+                const gameState = this.registry.get('gameState');
+                if (gameState) {
+                    this.uiPanel?.updatePlayerList(gameState, this.players);
+                }
+            }
+        });
     }
 
     shutdown() {
@@ -96,7 +112,6 @@ export class GameScene extends Phaser.Scene {
         this.events.on('fortify_unit', this.handleFortify, this);
         this.events.on('level_up_unit', this.handleLevelUp, this);
         this.events.on('end_turn', this.handleEndTurn, this);
-        this.events.on('new_game', this.handleNewGame, this);
 
         this.debugText = this.add.text(10, 10, '', {
             color: '#ffffff',
@@ -483,23 +498,11 @@ export class GameScene extends Phaser.Scene {
         this.gameActions!.endTurn();
     }
 
-    private handleNewGame() {
-        // Clear current game state
-        this.registry.set('gameState', null);
-        this.clearSelection();
-        this.clearHighlights();
-        this.renderMap([], []); // Clear the map
-
-        // Create new game
-        const newGameId = 'game-' + Math.random().toString(36).substring(2, 9);
-        this.gameActions!.createGame(newGameId);
-    }
-
     private handleGameState(state: GameState) {
         this.registry.set('gameState', state);
         this.renderMap(state.visibleTiles, state.visibleUnits);
         this.uiPanel!.updateTurnInfo(state.currentPlayerId, state.playerId, state.turnNumber);
-        this.uiPanel!.updatePlayerList(state);
+        this.uiPanel!.updatePlayerList(state, this.players);
         this.uiPanel?.updateMoveHistory(state.moveHistory);
 
         // Update highlight position if there's a selected unit

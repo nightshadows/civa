@@ -21,6 +21,7 @@ export type GameEvents = {
     'gameJoined': { playerId: string };
     'gameError': { message: string };
     'gamesList': { games: string[] };
+    'player_joined': { player: { id: string; name: string; type: string } };
 }
 
 export class GameEventEmitter {
@@ -68,6 +69,10 @@ socket.addEventListener('message', (event) => {
         case 'error':
             console.error('Game error:', data.message);
             gameEvents.emit('gameError', { message: data.message });
+            break;
+
+        case 'player_joined':
+            gameEvents.emit('player_joined', data);
             break;
     }
 });
