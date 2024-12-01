@@ -111,14 +111,18 @@ export class GameScene extends Phaser.Scene {
         this.events.on('fortify_unit', this.handleFortify, this);
         this.events.on('level_up_unit', this.handleLevelUp, this);
         this.events.on('end_turn', this.handleEndTurn, this);
+        this.input.on('pointermove', (pointer: Phaser.Input.Pointer) => {
+            this.updateDebugText(pointer);
+        });
 
+        // Create debug text with better positioning and style
         this.debugText = this.add.text(10, 10, '', {
             color: '#ffffff',
             backgroundColor: '#000000',
             padding: { x: 10, y: 5 },
             fontSize: '14px'
         });
-        this.debugText.setDepth(1000); // Ensure it's always on top
+        this.debugText.setDepth(1000).setScrollFactor(0); // Keep it fixed on screen
 
         // Add keyboard controls for map panning
         const moveView = (deltaX: number, deltaY: number) => {
@@ -193,22 +197,12 @@ export class GameScene extends Phaser.Scene {
     private drawHex(x: number, y: number, tileType: TileType, position: Position): Phaser.GameObjects.Container {
         const container = new Phaser.GameObjects.Container(this, 0, 0);
 
-        // Get sprite key based on tile type
-        const spriteKey = this.getTileSprite(tileType);
-
         // Add the terrain sprite
+        const spriteKey = this.getTileSprite(tileType);
         const sprite = new Phaser.GameObjects.Sprite(this, x, y, spriteKey);
-        sprite.setScale(this.hexSize * 2 / sprite.width); // Scale to match hex size
+        sprite.setScale(this.hexSize * 2 / sprite.width);
 
-        // Add coordinates text (you might want to remove this in production)
-        const text = new Phaser.GameObjects.Text(this, x, y, `${position.x},${position.y}`, {
-            color: '#000000',
-            fontSize: '12px',
-            align: 'center'
-        });
-        text.setOrigin(0.5, 0.5);
-
-        container.add([sprite, text]);
+        container.add([sprite]);
         return container;
     }
 
@@ -428,7 +422,6 @@ export class GameScene extends Phaser.Scene {
 
     private handleHexClick(pointer: Phaser.Input.Pointer): void {
         const clickedHexPos = this.view!.screenToHex(pointer.x, pointer.y);
-        const worldPos = this.view!.screenToWorld(pointer.x, pointer.y);
         const gameState = this.registry.get('gameState') as GameState;
 
         // Early return if no game state
@@ -442,15 +435,6 @@ export class GameScene extends Phaser.Scene {
             acc[tile.position.y][tile.position.x] = tile.type;
             return acc;
         }, []);
-
-        // Update debug text
-        this.debugText!.setText(
-            `Screen: (${Math.round(pointer.x)}, ${Math.round(pointer.y)})\n` +
-            `World: (${Math.round(worldPos.x)}, ${Math.round(worldPos.y)})\n` +
-            `Hex: (${clickedHexPos.x}, ${clickedHexPos.y})\n` +
-            `Distance: ${getHexDistance(clickedHexPos, this.selectedUnit?.position || clickedHexPos)}\n` +
-            `View: (${this.view!.getPosition().x}, ${this.view!.getPosition().y})`
-        );
 
         const clickedUnit = this.findUnitAtPosition(pointer.x, pointer.y);
 
@@ -609,5 +593,25 @@ export class GameScene extends Phaser.Scene {
     private showAuxInfo(unit: Unit): void {
         this.showMovementRange(unit);
         this.showAttackRange(unit);
+    }
+
+    // Add new method to handle debug text updates
+    private updateDebugText(pointer: Phaser.Input.Pointer): void {
+        if (!this.debugText) return;
+
+        const worldPos = this.view!.screenToWorld(pointer.x, pointer.y);
+        const hexPos = this.view!.screenToHex(pointer.x, pointer.y);
+        const viewPos = this.view!.getPosition();
+        const selectedUnitInfo = this.selectedUnit
+            ? `Selected: ${this.selectedUnit.type} at (${this.selectedUnit.position.x},${this.selectedUnit.position.y})`
+            : 'No unit selected';
+
+        this.debugText.setText(
+            `Screen: (${Math.round(pointer.x)}, ${Math.round(pointer.y)})\n` +
+            `World: (${Math.round(worldPos.x)}, ${Math.round(worldPos.y)})\n` +
+            `Hex: (${hexPos.x}, ${hexPos.y})\n` +
+            `View: (${Math.round(viewPos.x)}, ${Math.round(viewPos.y)})\n` +
+            selectedUnitInfo
+        );
     }
 }
