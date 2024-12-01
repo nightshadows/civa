@@ -10,6 +10,7 @@ export class Game {
     public map: TileType[][];
     public units: Unit[];
     private players: string[];
+    private playerConfigs: PlayerConfig[];
     private currentPlayerIndex: number;
     private mapSize: number;
     private readonly MAX_PLAYERS = 2;
@@ -24,24 +25,12 @@ export class Game {
         this._gameId = gameId;
         this.currentPlayerIndex = 0;
         this.maxPlayers = this.MAX_PLAYERS;
-        this.map = fixedMap || this.generateMapDumbWay();
+        this.map = fixedMap || this.generateScriptedMap();
         this.units = [];
         this.moveHistory = [];
-
+        this.playerConfigs = players;
         // Store player IDs
         this.players = players.map(p => p.id);
-
-        // Initialize units and AI players
-        players.forEach((player, index) => {
-            // Initialize units
-            const playerUnits = this.initializeUnitsForPlayer(player.id, index);
-            this.units.push(...playerUnits);
-
-            // Initialize AI if needed
-            if (player.type === PlayerType.AI) {
-                this.aiPlayers.set(player.id, new AIPlayer(gameId, player.id));
-            }
-        });
     }
 
     public canAddPlayer(): boolean {
@@ -124,15 +113,50 @@ export class Game {
 
     public async init(): Promise<void> {
         await this.generateMap();
+
+        // Initialize units and AI players
+        this.playerConfigs.forEach((player, index) => {
+            // Initialize units
+            const playerUnits = this.initializeUnitsForPlayer(player.id, index);
+            this.units.push(...playerUnits);
+
+            // Initialize AI if needed
+            if (player.type === PlayerType.AI) {
+                this.aiPlayers.set(player.id, new AIPlayer(this._gameId, player.id));
+            }
+        });
     }
 
     private async generateMap(): Promise<void> {
-        const response = await askOpenAI("Generate map for my game. The map should be a 2D array of tile types. The map is a aquare of one side size " + this.mapSize + ". The map should be a valid map that can be used in a hex-based board game. The map should be random but still have some structure to it. The map should be in JSON format. Here is the current map: " + this.map.toString(), this.map.toString());
-        const map = JSON.parse(response);
-        this.map = map;
+        const response = await askOpenAI(
+            "Generate map for my game. The map should be a 2D array of tile types. The map is a aquare of one side size " +
+            this.mapSize + ". The map should be a valid map that can be used in a hex-based board game. " +
+            "The map should be random but still have some structure to it. It should have oceans (consist of WATER tiles, 20%-40% of the map clustered together) and large islands." +
+            "islands should consist of GRASS (50-60% of the island area), FOREST tiles (10-15% of the island area) and HILLS tiles (10%-20% of the island area)." +
+            "Reply with the map only, nothing else. Example of reply (for size 2): FOREST,FOREST,WATER,WATER. Do not add quotas, it should start with tile type and end with tile type."
+        );
+
+        if (!response || response.trim() === '') {
+            console.warn('OpenAI returned empty response, using default map');
+            return;
+        }
+
+        console.info('DEFAULT MAP:');
+        console.info(this.map.toString());
+        console.info('GENERATED MAP:');
+        console.info(response);
+        // Split the string into an array and convert to TileType
+        const tiles = response.split(',').map(type => TileType[type as keyof typeof TileType]);
+
+        // Create a 2D array (assuming square map)
+        this.map = Array(this.mapSize).fill(null).map((_, y) =>
+            Array(this.mapSize).fill(null).map((_, x) =>
+                tiles[y * this.mapSize + x]
+            )
+        );
     }
 
-    private generateMapDumbWay(): TileType[][] {
+    private generateScriptedMap(): TileType[][] {
         const map: TileType[][] = [];
 
         // Initialize map with grass

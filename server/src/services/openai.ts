@@ -3,7 +3,6 @@ import { config } from '../config';
 
 export async function askOpenAI(
     content: string,
-    fallbackResponse: string,
     model: string = "gpt-4o-mini"
 ): Promise<string> {
     if (config.openai.apiKey) {
@@ -28,5 +27,5 @@ export async function askOpenAI(
         }
     }
 
-    return fallbackResponse;
+    return '';
 }
