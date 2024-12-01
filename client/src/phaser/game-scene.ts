@@ -2,7 +2,7 @@ import { TileType, Position, GameState, UnitType, Unit, CombatType } from '@shar
 import { HexGrid } from './hex-grid';
 import { UIPanel } from './ui-panel';
 import { View } from './view';
-import { GameActions, GameEventEmitter } from 'src/engine-setup';
+import { GameActions, GameEventEmitter } from '../game';
 import { getHexDistance } from '@shared/hex-utils';
 
 export class GameScene extends Phaser.Scene {
