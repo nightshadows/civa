@@ -1,5 +1,3 @@
-const API_BASE = 'api';
-
 import { config } from './config';
 import { GameState } from '@shared/types';
 
@@ -19,7 +17,7 @@ export interface Player {
 
 export class RestApiClient implements ApiClient {
     async listGames(): Promise<string[]> {
-        const response = await fetch(`${config.apiUrl}/${API_BASE}/games`, {
+        const response = await fetch(`${config.apiUrl}/games`, {
             method: 'GET',
             credentials: 'include',
             headers: { 'Content-Type': 'application/json' },
@@ -30,7 +28,7 @@ export class RestApiClient implements ApiClient {
     }
 
     async createGame(gameId: string): Promise<void> {
-        const response = await fetch(`${config.apiUrl}/${API_BASE}/games`, {
+        const response = await fetch(`${config.apiUrl}/games`, {
             method: 'POST',
             credentials: 'include',
             headers: { 'Content-Type': 'application/json' },
@@ -40,7 +38,7 @@ export class RestApiClient implements ApiClient {
     }
 
     async deleteGame(gameId: string): Promise<void> {
-        const response = await fetch(`${config.apiUrl}/${API_BASE}/games/${gameId}`, {
+        const response = await fetch(`${config.apiUrl}/games/${gameId}`, {
             method: 'DELETE',
             credentials: 'include',
             headers: { 'Content-Type': 'application/json' },
@@ -62,7 +60,7 @@ export class RestApiClient implements ApiClient {
 
     async getPlayer(): Promise<Player | null> {
         try {
-            const response = await fetch(`${config.apiUrl}/${API_BASE}/player`, {
+            const response = await fetch(`${config.apiUrl}/player`, {
                 method: 'GET',
                 headers: {
                     'Content-Type': 'application/json'
@@ -88,7 +86,7 @@ export class RestApiClient implements ApiClient {
 
     async register(name: string): Promise<{ success: boolean, error?: string }> {
         try {
-            const response = await fetch(`${config.apiUrl}/${API_BASE}/register`, {
+            const response = await fetch(`${config.apiUrl}/register`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json'
@@ -110,7 +108,7 @@ export class RestApiClient implements ApiClient {
     }
 
     async logout(): Promise<void> {
-        const response = await fetch(`${config.apiUrl}/${API_BASE}/logout`, {
+        const response = await fetch(`${config.apiUrl}/logout`, {
             method: 'POST',
             credentials: 'include',
         });
@@ -120,7 +118,7 @@ export class RestApiClient implements ApiClient {
     }
 
     async getGameState(gameId: string): Promise<{ gameState: GameState }> {
-        const response = await fetch(`${config.apiUrl}/${API_BASE}/games/${gameId}/state`, {
+        const response = await fetch(`${config.apiUrl}/games/${gameId}/state`, {
             method: 'GET',
             credentials: 'include',
             headers: { 'Content-Type': 'application/json' },

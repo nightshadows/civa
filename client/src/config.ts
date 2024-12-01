@@ -6,6 +6,6 @@ declare const process: {
 };
 
 export const config = {
-  wsUrl: process.env.WS_URL || 'ws://localhost:3000',
-  apiUrl: process.env.API_URL || 'http://localhost:3000'
+  wsUrl: process.env.WS_URL || 'ws://localhost:3000/api',
+  apiUrl: process.env.API_URL || 'http://localhost:3000/api'
 };
