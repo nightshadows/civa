@@ -127,6 +127,6 @@ export function createSessionCookie(token: string): string {
         + 'Path=/; '
         + 'HttpOnly; '
         + 'Secure; '
-        + 'SameSite=Strict; '
+        + 'SameSite=None; '
         + `Expires=${new Date(Date.now() + SESSION_DURATION).toUTCString()}`;
 } 
