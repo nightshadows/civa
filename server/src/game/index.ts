@@ -127,10 +127,8 @@ export class Game {
     }
 
     private async generateMap(): Promise<void> {
-        console.log(`MAPGEN`);
         const response = await askOpenAI("Generate map for my game. The map should be a 2D array of tile types. The map is a aquare of one side size " + this.mapSize + ". The map should be a valid map that can be used in a hex-based board game. The map should be random but still have some structure to it. The map should be in JSON format. Here is the current map: " + this.map.toString(), this.map.toString());
         const map = JSON.parse(response);
-        console.log(response);
         this.map = map;
     }
 
