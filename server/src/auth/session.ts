@@ -5,6 +5,9 @@ export interface SessionPayload {
     type: string;       // token type
 }
 
+// 30 days in milliseconds
+const SESSION_DURATION = 30 * 24 * 60 * 60 * 1000;
+
 function base64UrlEncode(str: string): string {
     return btoa(str)
         .replace(/\+/g, '-')
@@ -14,7 +17,11 @@ function base64UrlEncode(str: string): string {
 
 export async function createSessionToken(playerId: string, secret: string): Promise<string> {
     const header = { alg: 'HS256', typ: 'JWT' };
-    const payload = { sub: playerId, iat: Date.now() };
+    const payload = { 
+        sub: playerId, 
+        iat: Date.now(),
+        exp: Date.now() + SESSION_DURATION  // Add expiration time
+    };
     
     // Convert to base64
     const headerB64 = btoa(JSON.stringify(header));
@@ -121,5 +128,5 @@ export function createSessionCookie(token: string): string {
         + 'HttpOnly; '
         + 'Secure; '
         + 'SameSite=Strict; '
-        + `Expires=${new Date(Date.now() + 86400000).toUTCString()}`;
+        + `Expires=${new Date(Date.now() + SESSION_DURATION).toUTCString()}`;
 } 

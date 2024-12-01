@@ -109,14 +109,16 @@ export class CloudflareGameServer extends GameServerBase {
     }
 
     if (parts[0] === 'api') {
-      let body;
-      try {
-        body = request.method !== 'GET' ? await request.json() : undefined;
-      } catch (e) {
-        return new Response('Invalid JSON', {
-          status: 400,
-          headers: this.getCorsHeaders(request)
-        });
+      let body = undefined;
+      if (request.method !== 'GET' && request.headers.get('Content-Length') !== '0') {
+        try {
+          body = await request.json();
+        } catch (e) {
+          return new Response('Invalid JSON', {
+            status: 400,
+            headers: this.getCorsHeaders(request)
+          });
+        }
       }
 
       const result = await this.handleRestRequest(request.method, parts, body, request);

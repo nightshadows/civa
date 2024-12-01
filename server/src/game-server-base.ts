@@ -130,9 +130,8 @@ export abstract class GameServerBase {
                     return {
                         success: true,
                         headers: {
-                            ...this.corsHeaders,
-                            'Access-Control-Allow-Credentials': 'true',
-                            'Set-Cookie': 'session=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/; secure; httponly; samesite=strict'
+                            'Set-Cookie': 'session=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/; secure; httponly; samesite=strict',
+                            'Access-Control-Allow-Credentials': 'true'
                         }
                     };
                 }
