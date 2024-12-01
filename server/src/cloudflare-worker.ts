@@ -91,13 +91,16 @@ export class CloudflareGameServer extends GameServerBase {
   async fetch(request: Request): Promise<Response> {
     await this.initialized;
 
+    // Always add CORS headers for all responses
+    const corsHeaders = this.getCorsHeaders(request);
+
     // Handle CORS preflight request
     if (request.method === 'OPTIONS') {
       return new Response(null, {
-        status: 204, // No content
+        status: 204,
         headers: {
-          ...this.getCorsHeaders(request),
-          'Access-Control-Max-Age': '86400', // 24 hours cache for preflight
+          ...corsHeaders,
+          'Access-Control-Max-Age': '86400',
         }
       });
     }
@@ -109,61 +112,83 @@ export class CloudflareGameServer extends GameServerBase {
     if (parts[0] === 'api' && !['register', 'auth'].includes(parts[1])) {
       const authResponse = await this.checkAuthorized(request);
       if (authResponse) {
-        return authResponse;
+        return new Response(authResponse.body, {
+          status: authResponse.status,
+          headers: {
+            ...corsHeaders,
+            ...authResponse.headers
+          }
+        });
       }
     }
 
-    if (parts[0] === 'api') {
-      let body = undefined;
-      if (request.method !== 'GET' && request.headers.get('Content-Length') !== '0') {
-        try {
-          body = await request.json();
-        } catch (e) {
-          return new Response('Invalid JSON', {
-            status: 400,
-            headers: this.getCorsHeaders(request)
+    try {
+      if (parts[0] === 'api') {
+        let body = undefined;
+        if (request.method !== 'GET' && request.headers.get('Content-Length') !== '0') {
+          try {
+            body = await request.json();
+          } catch (e) {
+            return new Response('Invalid JSON', {
+              status: 400,
+              headers: corsHeaders
+            });
+          }
+        }
+
+        const result = await this.handleRestRequest(request.method, parts, body, request);
+        if (result) {
+          return new Response(JSON.stringify(result), {
+            headers: {
+              'Content-Type': 'application/json',
+              ...corsHeaders,
+              ...(result.headers || {})
+            }
           });
         }
       }
 
-      const result = await this.handleRestRequest(request.method, parts, body, request);
-      if (result) {
-        const headers = {
-          'Content-Type': 'application/json',
-          ...this.getCorsHeaders(request),
-          ...(result.headers || {})
-        };
+      if (request.headers.get('Upgrade') === 'websocket') {
+        const player = await this.getPlayerFromRequest(request);
+        if (!player) {
+          return new Response('Unauthorized', { 
+            status: 401,
+            headers: corsHeaders 
+          });
+        }
 
-        return new Response(JSON.stringify(result), { headers });
+        const { 0: client, 1: server } = new WebSocketPair();
+        server.accept();
+
+        this.wsManager.setPlayerSocket(server, player.id);
+
+        server.addEventListener('message', async (msg) => {
+          const data = JSON.parse(msg.data as string) as GameMessage;
+          await this.handleWebSocketMessage(server, data);
+        });
+
+        server.addEventListener('close', () => {
+          this.handleWebSocketClose(server);
+        });
+
+        return new Response(null, {
+          status: 101,
+          webSocket: client,
+        });
       }
 
-    } else if (request.headers.get('Upgrade') === 'websocket') {
-      const player = await this.getPlayerFromRequest(request);
-      if (!player) {
-        return new Response('Unauthorized', { status: 401 });
-      }
-
-      const { 0: client, 1: server } = new WebSocketPair();
-      server.accept();
-
-      this.wsManager.setPlayerSocket(server, player.id);
-
-      server.addEventListener('message', async (msg) => {
-        const data = JSON.parse(msg.data as string) as GameMessage;
-        await this.handleWebSocketMessage(server, data);
-      });
-
-      server.addEventListener('close', () => {
-        this.handleWebSocketClose(server);
-      });
-
-      return new Response(null, {
-        status: 101,
-        webSocket: client,
+    } catch (error) {
+      console.error('Request error:', error);
+      return new Response('Internal Server Error', {
+        status: 500,
+        headers: corsHeaders
       });
     }
 
-    return new Response('Not Found', { status: 404 });
+    return new Response('Not Found', { 
+      status: 404,
+      headers: corsHeaders 
+    });
   }
 
   private async checkAuthorized(request: Request): Promise<Response | undefined> {
