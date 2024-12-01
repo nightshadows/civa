@@ -88,14 +88,20 @@ export abstract class GameServerBase {
                 if (parts[1] === 'register') {
                     const { name } = body;
                     
-                    // Create new player
-                    const player: Player = {
-                        id: this.generatePlayerId(),
-                        name: name,
-                        createdAt: Date.now()
-                    };
+                    // Look up existing player by name
+                    const players = await this.storage.list({ prefix: 'player:' });
+                    let player = Array.from(players.values())
+                        .find((p: Player) => p.name === name);
 
-                    await this.storage.put(`player:${player.id}`, player);
+                    if (!player) {
+                        // Create new player if none exists
+                        player = {
+                            id: this.generatePlayerId(),
+                            name: name,
+                            createdAt: Date.now()
+                        };
+                        await this.storage.put(`player:${player.id}`, player);
+                    }
 
                     // Create session token
                     const sessionToken = await this.createSessionToken(player.id);
