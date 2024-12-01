@@ -179,10 +179,20 @@ export abstract class GameServerBase {
                         };
                     }
 
-                    const { gameId } = body;
+                    const { gameId, addAiPlayer } = body;
                     const players: PlayerConfig[] = [
                         { id: player.id, type: PlayerType.HUMAN },
                     ];
+
+                    // Add AI player if requested
+                    if (addAiPlayer) {
+                        const aiPlayerId = `ai_${this.generatePlayerId()}`;
+                        players.push({
+                            id: aiPlayerId,
+                            type: PlayerType.AI
+                        });
+                    }
+
                     const newGame = new Game(12, players, gameId);
                     await newGame.init();
                     this.gameManager.games.set(gameId, newGame);

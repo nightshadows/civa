@@ -228,7 +228,6 @@ export class UIPanel {
         gameState: GameState,
         players: Map<string, { name: string; type: string }>
     ) {
-        console.log('updatePlayerList', gameState, players);
         const playerList = gameState.players.map(id => {
             const playerInfo = players.get(id);
             const displayName = playerInfo?.name || id; // Fallback to ID if name not found
