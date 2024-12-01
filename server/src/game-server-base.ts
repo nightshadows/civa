@@ -250,7 +250,7 @@ export abstract class GameServerBase {
                 playerId
             };
 
-            handleGameMessage(messageWithPlayer, ws, this.wsManager, this.gameManager);
+            await handleGameMessage(messageWithPlayer, ws, this.wsManager, this.gameManager, this.storage);
         } catch (error) {
             console.error('Error handling message:', error);
             ws.send(JSON.stringify(createErrorMessage('Internal server error')));

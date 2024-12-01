@@ -1,5 +1,6 @@
 import { Position } from "../../shared/src/types";
 import { Game } from "./game";
+import { GameStorage } from "./game-server-base";
 import { PlayerType, PlayerConfig } from "./game/player-types";
 import { WebSocketManager } from "./websocket/websocket-manager";
 
@@ -13,13 +14,14 @@ export type GameAction = {
 };
 
 export type GameMessage = {
-  type: 'join_game' | 'action' | 'game_state' | 'error';
+  type: 'join_game' | 'action' | 'game_state' | 'error' | 'player_joined';
   gameId?: string;
   playerId?: string;
   action?: GameAction;
   state?: any;  // Replace 'any' with your actual game state type
   message?: string;
   games?: string[];  // Add this for the games list response
+  player?: { id: string; name: string; type: PlayerType };  // Add player details
 };
 
 export function createErrorMessage(message: string): GameMessage {
@@ -125,10 +127,19 @@ export function broadcastGameState(
   });
 }
 
-export function handleJoinGame(
+export function createPlayerJoinedMessage(player: { id: string; name: string; type: PlayerType }): GameMessage {
+  return {
+    type: 'player_joined',
+    player
+  };
+}
+
+export async function handleJoinGame(
   data: GameMessage,
-  gameManager: GameManager
-): { game: Game | null; error?: string } {
+  gameManager: GameManager,
+  wsManager: WebSocketManager,
+  storage: GameStorage
+): Promise<{ game: Game | null; error?: string }> {
   let gameId = data.gameId!;
   const playerId = data.playerId!;
 
@@ -144,6 +155,43 @@ export function handleJoinGame(
       game.addPlayer({ id: playerId, type: PlayerType.HUMAN });
       gameManager.playerSessions.set(playerId, gameId);
       console.log(`Added player ${playerId} to game ${gameId}`);
+
+      try {
+        // Fetch details for the joining player
+        const joiningPlayer = await storage.get({ prefix: `player:${playerId}` });
+        const joiningPlayerDetails = {
+          id: playerId,
+          name: joiningPlayer?.name || playerId,
+          type: PlayerType.HUMAN
+        };
+
+        // Get existing players (excluding the joining player)
+        const existingPlayers = game.getPlayers().filter(pid => pid.id !== playerId);
+        
+        // Fetch details for existing players
+        for (const existingPlayer of existingPlayers) {
+          const storedPlayer = await storage.get({ prefix: `player:${existingPlayer.id}` });
+          const existingPlayerDetails = {
+            id: existingPlayer.id,
+            name: storedPlayer?.name || existingPlayer.id,
+            type: PlayerType.HUMAN
+          };
+
+          // Send existing player info to joining player
+          const joiningPlayerWs = wsManager.getSocketFromPlayer(playerId);
+          if (joiningPlayerWs?.readyState === 1) {
+            joiningPlayerWs.send(JSON.stringify(createPlayerJoinedMessage(existingPlayerDetails)));
+          }
+
+          // Send joining player info to existing player
+          const existingPlayerWs = wsManager.getSocketFromPlayer(existingPlayer.id);
+          if (existingPlayerWs?.readyState === 1) {
+            existingPlayerWs.send(JSON.stringify(createPlayerJoinedMessage(joiningPlayerDetails)));
+          }
+        }
+      } catch (error) {
+        console.error(`Failed to fetch player details for ${playerId}:`, error);
+      }
     } else {
       return { game: null, error: 'Game is full' };
     }
@@ -155,24 +203,30 @@ export function handleJoinGame(
   return { game };
 }
 
-export function handleGameMessage(
+export async function handleGameMessage(
   data: GameMessage,
   ws: GameWebSocket,
   wsManager: WebSocketManager,
-  gameManager: GameManager
-): { game?: Game | null; error?: string } {
+  gameManager: GameManager,
+  storage: GameStorage
+): Promise<{ game?: Game | null; error?: string }> {
   switch (data.type) {
     case 'join_game': {
-      const result = handleJoinGame(data, gameManager);
-      if (result.error) {
-        ws.send(JSON.stringify(createErrorMessage(result.error)));
-        return { error: result.error };
+      try {
+        const result = await handleJoinGame(data, gameManager, wsManager, storage);
+        if (result.error) {
+          ws.send(JSON.stringify(createErrorMessage(result.error)));
+          return { error: result.error };
+        }
+        if (result.game) {
+          await broadcastGameState(result.game, wsManager);
+          return { game: result.game };
+        }
+        return {};
+      } catch (error) {
+        console.error('Error handling join game:', error);
+        return { error: 'Internal server error' };
       }
-      if (result.game) {
-        broadcastGameState(result.game, wsManager);
-        return { game: result.game };
-      }
-      break;
     }
 
     case 'action': {
@@ -192,20 +246,24 @@ export function handleGameMessage(
         return { error: 'Game not found' };
       }
 
-      const result = handleGameAction(game, playerId, data.action!);
-      if (result.success) {
-        broadcastGameState(game, wsManager);
-        return { game };
-      } else {
-        ws.send(JSON.stringify(createErrorMessage(result.error!)));
-        return { error: result.error };
+      try {
+        const result = handleGameAction(game, playerId, data.action!);
+        if (result.success) {
+          await broadcastGameState(game, wsManager);
+          return { game };
+        } else {
+          ws.send(JSON.stringify(createErrorMessage(result.error!)));
+          return { error: result.error };
+        }
+      } catch (error) {
+        console.error('Error handling game action:', error);
+        return { error: 'Internal server error' };
       }
     }
 
     default:
       return { error: 'Unknown message type' };
   }
-  return {};
 }
 
 export function getPlayerIdFromWs(ws: GameWebSocket, sessions: Map<string, GameWebSocket>): string | null {
