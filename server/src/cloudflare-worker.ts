@@ -72,14 +72,19 @@ export class CloudflareGameServer extends GameServerBase {
 
   protected getCorsHeaders(request: Request) {
     const origin = request.headers.get('Origin') || '';
-    const isLocalhost = origin.includes('localhost');
-    const allowedOrigin = isLocalhost ? origin : 'https://your-production-domain.com';
+    const allowedOrigins = [
+        'http://localhost:1234',          // Local development
+        'https://civa-5ls.pages.dev'      // Production domain
+    ];
+
+    // Check if the request origin is in our allowed list
+    const allowedOrigin = allowedOrigins.includes(origin) ? origin : '';
 
     return {
-      'Access-Control-Allow-Origin': allowedOrigin,
-      'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
-      'Access-Control-Allow-Headers': 'Content-Type, Authorization',
-      'Access-Control-Allow-Credentials': 'true',
+        'Access-Control-Allow-Origin': allowedOrigin,
+        'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
+        'Access-Control-Allow-Headers': 'Content-Type, Authorization, Cookie',
+        'Access-Control-Allow-Credentials': 'true',
     };
   }
 
