@@ -3,6 +3,12 @@ main = "src/cloudflare-worker.ts"
 compatibility_date = "2024-04-03"
 workers_dev = true
 
+# Add routes for the Pages domain
+routes = [
+  "civa-5ls.pages.dev/api/*",
+  "civa-5ls.pages.dev/ws/*"
+]
+
 [durable_objects]
 bindings = [
   { name = "GAME", class_name = "GameDO" }
