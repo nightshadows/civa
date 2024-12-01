@@ -122,54 +122,51 @@ export class UIPanel {
 
     private createButtons() {
         const baseY = this.scene.game.canvas.height - this.height + 80;
+        const buttonWidth = 100;
+        const buttonSpacing = 20;
+        const buttonStyle = {
+            color: '#ffffff',
+            fontSize: '14px',
+            fontFamily: 'Arial'
+        };
 
-        // Fortify button
-        this.fortifyButton = this.scene.add.rectangle(400, baseY, 100, 30, 0x666666)
+        // Calculate right-aligned positions
+        const rightEdge = this.scene.game.canvas.width;
+        let currentX = rightEdge - buttonSpacing - buttonWidth/2;
+
+        // End Turn button (rightmost)
+        this.endTurnButton = this.scene.add.rectangle(currentX, baseY, buttonWidth, 30, 0x666666)
             .setInteractive()
             .setDepth(101);
-        this.fortifyText = this.scene.add.text(400, baseY, 'Fortify', {
-            color: '#ffffff',
-            fontSize: '12px',
-            fontFamily: 'Arial'
-        })
-        .setOrigin(0.5)
-        .setDepth(102);
+        this.endTurnText = this.scene.add.text(currentX, baseY, 'End Turn', buttonStyle)
+            .setOrigin(0.5)
+            .setDepth(102);
+        currentX -= buttonWidth + buttonSpacing;
 
         // Level Up button
-        this.levelUpButton = this.scene.add.rectangle(520, baseY, 100, 30, 0x666666)
+        this.levelUpButton = this.scene.add.rectangle(currentX, baseY, buttonWidth, 30, 0x666666)
             .setInteractive()
             .setDepth(101);
-        this.levelUpText = this.scene.add.text(520, baseY, 'Level Up', {
-            color: '#ffffff',
-            fontSize: '12px',
-            fontFamily: 'Arial'
-        })
-        .setOrigin(0.5)
-        .setDepth(102);
+        this.levelUpText = this.scene.add.text(currentX, baseY, 'Level Up', buttonStyle)
+            .setOrigin(0.5)
+            .setDepth(102);
+        currentX -= buttonWidth + buttonSpacing;
 
-        // End Turn button
-        this.endTurnButton = this.scene.add.rectangle(640, baseY, 100, 30, 0x666666)
+        // Fortify button
+        this.fortifyButton = this.scene.add.rectangle(currentX, baseY, buttonWidth, 30, 0x666666)
             .setInteractive()
             .setDepth(101);
-        this.endTurnText = this.scene.add.text(640, baseY, 'End Turn', {
-            color: '#ffffff',
-            fontSize: '12px',
-            fontFamily: 'Arial'
-        })
-        .setOrigin(0.5)
-        .setDepth(102);
+        this.fortifyText = this.scene.add.text(currentX, baseY, 'Fortify', buttonStyle)
+            .setOrigin(0.5)
+            .setDepth(102);
 
         // Menu button (positioned below End Turn button)
-        this.menuButton = this.scene.add.rectangle(640, baseY + 40, 100, 30, 0x666666)
+        this.menuButton = this.scene.add.rectangle(rightEdge - buttonSpacing - buttonWidth/2, baseY + 40, buttonWidth, 30, 0x666666)
             .setInteractive()
             .setDepth(101);
-        this.menuText = this.scene.add.text(640, baseY + 40, 'Menu', {
-            color: '#ffffff',
-            fontSize: '12px',
-            fontFamily: 'Arial'
-        })
-        .setOrigin(0.5)
-        .setDepth(102);
+        this.menuText = this.scene.add.text(rightEdge - buttonSpacing - buttonWidth/2, baseY + 40, 'Menu', buttonStyle)
+            .setOrigin(0.5)
+            .setDepth(102);
 
         // Add click handlers
         this.fortifyButton.on('pointerdown', () => this.onFortifyClick());
@@ -228,7 +225,7 @@ export class UIPanel {
     }
 
     public updatePlayerList(
-        gameState: GameState, 
+        gameState: GameState,
         players: Map<string, { name: string; type: string }>
     ) {
         console.log('updatePlayerList', gameState, players);
@@ -249,7 +246,7 @@ export class UIPanel {
         const lastMoves = history.slice(-3).reverse().map(action => {
             const time = new Date(action.timestamp).toLocaleTimeString();
             const playerId = action.playerId;
-            
+
             switch (action.type) {
                 case 'MOVE_UNIT':
                     return `[${time}] ${playerId} moved unit from (${action.payload?.from?.x},${action.payload?.from?.y}) to (${action.payload?.to?.x},${action.payload?.to?.y})`;

@@ -57,15 +57,32 @@ export class GameSetup {
         onReady: () => void
     ) {
         const UI_PANEL_HEIGHT = 150;
+        const windowHeight = window.innerHeight;
+        const windowWidth = window.innerWidth;
+        const gameHeight = windowHeight - UI_PANEL_HEIGHT;
+
         const phaserConfig = {
             type: Phaser.AUTO,
-            width: config.width || this.DEFAULT_WIDTH,
-            height: (config.height || this.DEFAULT_HEIGHT) + UI_PANEL_HEIGHT,
+            width: windowWidth,
+            height: gameHeight,
             backgroundColor: config.backgroundColor || this.DEFAULT_BG_COLOR,
-            scene: PhaserGameScene
+            scene: PhaserGameScene,
+            scale: {
+                mode: Phaser.Scale.RESIZE,
+                autoCenter: Phaser.Scale.CENTER_BOTH,
+                parent: 'gameContainer',
+            }
         };
 
         const game = new Phaser.Game(phaserConfig);
+
+        // Handle window resizing
+        window.addEventListener('resize', () => {
+            const newWidth = window.innerWidth;
+            const newHeight = window.innerHeight - UI_PANEL_HEIGHT;
+            game.scale.resize(newWidth, newHeight);
+        });
+
         game.scene.start('GameScene', {
             playerId: config.playerId,
             gameActions: config.gameActions,
