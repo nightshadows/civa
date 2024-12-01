@@ -11,7 +11,7 @@ export class Game {
     private players: string[];
     private currentPlayerIndex: number;
     private mapSize: number;
-    private readonly MAX_PLAYERS = 2;
+    private readonly _MAX_PLAYERS = 2;
     private _gameId: string;
     private turnNumber: number = 1;
     private aiPlayers: Map<string, AIPlayer> = new Map();
@@ -42,7 +42,7 @@ export class Game {
     }
 
     public canAddPlayer(): boolean {
-        return this.players.length < this.MAX_PLAYERS;
+        return this.players.length < this._MAX_PLAYERS;
     }
 
     public addPlayer(player: PlayerConfig): boolean {
@@ -246,6 +246,7 @@ export class Game {
             playerId,
             currentPlayerId: this.players[this.currentPlayerIndex],
             players: this.players,
+            maxPlayers: this.MAX_PLAYERS,
             visibleTiles,
             visibleUnits,
             mapSize: this.mapSize,
@@ -372,6 +373,10 @@ export class Game {
 
     public get gameId(): string {
         return this._gameId;
+    }
+
+    public get MAX_PLAYERS(): number {
+        return this._MAX_PLAYERS;
     }
 
     private isWithinMapBounds(position: Position): boolean {

@@ -15,5 +15,8 @@ new_classes = ["GameDO"]
 [observability.logs]
 enabled = true
 
+[vars]
+JWT_SECRET = "development-secret-key-do-not-use-in-production"
+
 [env.production]
 vars = { JWT_SECRET = "production-secret-will-be-set-in-dashboard" }

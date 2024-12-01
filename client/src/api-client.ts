@@ -1,10 +1,13 @@
 const API_BASE = 'api';
 
 import { config } from './config';
+import { GameState } from '@shared/types';
+
 export interface ApiClient {
     listGames(): Promise<string[]>;
     createGame(gameId: string): Promise<void>;
     deleteGame(gameId: string): Promise<void>;
+    getGameState(gameId: string): Promise<GameState>;
 }
 
 export interface Player {
@@ -115,4 +118,14 @@ export class RestApiClient implements ApiClient {
             throw new Error('Logout failed');
         }
     }
-} 
+
+    async getGameState(gameId: string): Promise<GameState> {
+        const response = await fetch(`${config.apiUrl}/${API_BASE}/games/${gameId}/state`, {
+            method: 'GET',
+            credentials: 'include',
+            headers: { 'Content-Type': 'application/json' },
+        });
+        if (!response.ok) throw new Error('Failed to get game state');
+        return await response.json();
+    }
+}

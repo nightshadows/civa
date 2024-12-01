@@ -21,7 +21,7 @@ export interface Player {
     id: string;
     name: string;
     createdAt: number;
-} 
+}
 
 export interface ServerRequest {
     headers: {
@@ -72,10 +72,51 @@ export abstract class GameServerBase {
         switch (method) {
             case 'GET':
                 if (parts[1] === 'games') {
+                    if (parts[2] && parts[3] === 'state') {
+                        // Get game state
+                        const gameId = parts[2];
+                        const player = await this.getPlayerFromRequest(request);
+                        if (!player) {
+                            return {
+                                status: 401,
+                                body: { message: 'Not authenticated' }
+                            };
+                        }
+
+                        const game = this.gameManager.games.get(gameId);
+                        if (!game) {
+                            return {
+                                status: 404,
+                                body: { message: 'Game not found' }
+                            };
+                        }
+
+                        return {
+                            players: game.getPlayers(),
+                            MAX_PLAYERS: game.MAX_PLAYERS
+                        };
+                    }
+                    // List games
                     const player = await this.getPlayerFromRequest(request);
+                    if (!player) {
+                        return {
+                            status: 401,
+                            body: { message: 'Not authenticated' }
+                        };
+                    }
+
                     const allGames = await this.storage.list({ prefix: 'game:' });
                     const games = Array.from(allGames.keys())
-                        .map(key => key.toString().replace('game:', ''));
+                        .map(key => key.toString().replace('game:', ''))
+                        .filter(gameId => {
+                            const game = this.gameManager.games.get(gameId);
+                            if (!game) return false;
+
+                            // Include the game if:
+                            // 1. It's not full, OR
+                            // 2. The player is already in it
+                            return !game.canAddPlayer() ? game.hasPlayer(player.id) : true;
+                        });
                     return { games };
                 }
                 if (parts[1] === 'player') {
@@ -87,7 +128,7 @@ export abstract class GameServerBase {
             case 'POST':
                 if (parts[1] === 'register') {
                     const { name } = body;
-                    
+
                     // Look up existing player by name
                     const players = await this.storage.list({ prefix: 'player:' });
                     let player = Array.from(players.values())
@@ -105,7 +146,7 @@ export abstract class GameServerBase {
 
                     // Create session token
                     const sessionToken = await this.createSessionToken(player.id);
-                    
+
                     return {
                         success: true,
                         headers: {
@@ -146,7 +187,7 @@ export abstract class GameServerBase {
             case 'DELETE':
                 if (parts[1] === 'games' && parts[2]) {
                     const gameId = parts[2];
-                    
+
                     // Get player from session
                     const player = await this.getPlayerFromRequest(request);
                     if (!player) {
@@ -235,12 +276,12 @@ export abstract class GameServerBase {
         const length = 8;
         const randomValues = new Uint8Array(length);
         crypto.getRandomValues(randomValues);
-        
+
         let id = 'p_';
         for (let i = 0; i < length; i++) {
             id += chars[randomValues[i] % chars.length];
         }
-        
+
         return id;
     }
 
@@ -251,4 +292,4 @@ export abstract class GameServerBase {
 
     // Add abstract method for session handling
     protected abstract getSessionFromRequest(request: ServerRequest): Promise<SessionPayload | null>;
-} 
+}

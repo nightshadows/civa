@@ -61,9 +61,19 @@ const updateGamesList = async () => {
         const container = document.getElementById('gamesContainer');
         if (!container) return;
 
-        container.innerHTML = games.map(gameId => `
+        // Fetch all game states in parallel
+        const gameStates = await Promise.all(
+            games.map(gameId => api.getGameState(gameId))
+        );
+
+        container.innerHTML = games.map((gameId, index) => {
+            const gameState = gameStates[index];
+            return `
             <div class="game-item">
-                <span>Game: ${gameId}</span>
+                <div class="game-info">
+                    <span>Game: ${gameId}</span>
+                    <span class="player-count">(${gameState.players.length}/${gameState.MAX_PLAYERS} players)</span>
+                </div>
                 <div class="button-group">
                     <button class="join-button" data-gameid="${gameId}">Join Game</button>
                     <button class="delete-button" data-gameid="${gameId}" title="Delete Game">
@@ -74,7 +84,7 @@ const updateGamesList = async () => {
                     </button>
                 </div>
             </div>
-        `).join('');
+        `}).join('');
 
         // Add click handlers for join buttons
         container.querySelectorAll('.join-button').forEach(button => {
