@@ -4,6 +4,7 @@ import { getStartingUnits, createUnit, resetUnitMovement, isMeleeUnit, canAttack
 import { getMovementCost } from '@shared/terrain';
 import { AIPlayer } from './ai-player';
 import { PlayerConfig, PlayerType } from './player-types';
+import { askOpenAI } from '../services/openai';
 
 export class Game {
     public map: TileType[][];
@@ -23,7 +24,7 @@ export class Game {
         this._gameId = gameId;
         this.currentPlayerIndex = 0;
         this.maxPlayers = this.MAX_PLAYERS;
-        this.map = fixedMap || this.generateMap();
+        this.map = fixedMap || this.generateMapDumbWay();
         this.units = [];
         this.moveHistory = [];
 
@@ -121,7 +122,19 @@ export class Game {
         return units;
     }
 
-    private generateMap(): TileType[][] {
+    public async init(): Promise<void> {
+        await this.generateMap();
+    }
+
+    private async generateMap(): Promise<void> {
+        console.log(`MAPGEN`);
+        const response = await askOpenAI("Generate map for my game. The map should be a 2D array of tile types. The map is a aquare of one side size " + this.mapSize + ". The map should be a valid map that can be used in a hex-based board game. The map should be random but still have some structure to it. The map should be in JSON format. Here is the current map: " + this.map.toString(), this.map.toString());
+        const map = JSON.parse(response);
+        console.log(response);
+        this.map = map;
+    }
+
+    private generateMapDumbWay(): TileType[][] {
         const map: TileType[][] = [];
 
         // Initialize map with grass

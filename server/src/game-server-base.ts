@@ -184,6 +184,7 @@ export abstract class GameServerBase {
                         { id: player.id, type: PlayerType.HUMAN },
                     ];
                     const newGame = new Game(12, players, gameId);
+                    await newGame.init();
                     this.gameManager.games.set(gameId, newGame);
                     await this.storage.put(`game:${gameId}`, newGame.toJSON());
                     return { success: true };
