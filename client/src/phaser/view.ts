@@ -4,6 +4,7 @@ export class View {
     private offsetX: number = 0;
     private offsetY: number = 0;
     private zoom: number = 1;
+    public hasBeenCentered: boolean = false;
 
     constructor(
         private readonly viewportWidth: number,
@@ -96,5 +97,14 @@ export class View {
     centerOn(worldX: number, worldY: number): void {
         this.offsetX = this.viewportWidth/2 - worldX * this.zoom;
         this.offsetY = this.viewportHeight/2 - worldY * this.zoom;
+    }
+
+    // Update the keyboard movement handlers in GameScene to use fromPan
+    moveView(deltaX: number, deltaY: number) {
+        const currentPos = this.getPosition();
+        this.setPosition(
+            currentPos.x + deltaX,
+            currentPos.y + deltaY,
+        );
     }
 }

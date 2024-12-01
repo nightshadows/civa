@@ -107,7 +107,6 @@ export class GameScene extends Phaser.Scene {
             this.handleHexClick(pointer);
         });
 
-
         // Add event listeners for UI actions
         this.events.on('fortify_unit', this.handleFortify, this);
         this.events.on('level_up_unit', this.handleLevelUp, this);
@@ -123,8 +122,7 @@ export class GameScene extends Phaser.Scene {
 
         // Add keyboard controls for map panning
         const moveView = (deltaX: number, deltaY: number) => {
-            const currentPos = this.view!.getPosition();
-            this.view!.setPosition(currentPos.x + deltaX, currentPos.y + deltaY);
+            this.view!.moveView(deltaX, deltaY);
 
             const gameState = this.registry.get('gameState');
             if (gameState) {
@@ -275,6 +273,17 @@ export class GameScene extends Phaser.Scene {
         this.mapContainer!.add(tilesContainer);
         this.mapContainer!.add(unitsContainer);
 
+        // If no tiles, don't proceed
+        if (tiles.length === 0) return;
+
+        // Only automatically update view position once (on first render)
+        if (!this.view!.hasBeenCentered) {
+            const { x: centerX, y: centerY } = this.getViewCenter(tiles);
+            this.view!.setPosition(centerX, centerY);
+            this.view!.hasBeenCentered = true;
+        }
+
+        // Render tiles and units
         tiles.forEach(tile => {
             const worldPos = this.view!.hexToWorld(tile.position);
             const screenPos = this.view!.worldToScreen(worldPos.x, worldPos.y);
@@ -299,6 +308,26 @@ export class GameScene extends Phaser.Scene {
                 this.selectedUnit = null;
             }
         }
+    }
+    private getViewCenter(tiles: { type: TileType; position: Position; }[]): Position {
+        // Find map boundaries
+        let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+        tiles.forEach(tile => {
+            minX = Math.min(minX, tile.position.x);
+            maxX = Math.max(maxX, tile.position.x);
+            minY = Math.min(minY, tile.position.y);
+            maxY = Math.max(maxY, tile.position.y);
+        });
+
+        // Calculate map dimensions
+        const mapWidth = (maxX - minX + 1) * this.hexSize * 2 * 0.75;
+        const mapHeight = (maxY - minY + 1) * this.hexSize * Math.sqrt(3);
+
+        // Calculate center offset
+        const centerX = (this.game.canvas.width - mapWidth) / 2;
+        const centerY = (this.game.canvas.height - this.uiPanelHeight - mapHeight) / 2;
+
+        return { x: centerX, y: centerY };
     }
 
     private clearHighlights(): void {
