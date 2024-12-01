@@ -553,15 +553,21 @@ export class Game {
 
         let damageToTarget = 0;
         let damageToAttacker = 0;
+        const targetPosition = { ...target.position }; // Store target position before combat
 
         // Calculate and apply damage based on combat type
         if (isMeleeUnit(attacker)) {
             // Melee combat: both units deal and receive damage
             damageToTarget = Math.max(0, attacker.attack - target.defense);
-            damageToAttacker = Math.max(0, target.defense - attacker.defense);
+            damageToAttacker = Math.max(0, target.attack - attacker.defense);
 
             target.currentHp = Math.max(0, target.currentHp - damageToTarget);
             attacker.currentHp = Math.max(0, attacker.currentHp - damageToAttacker);
+
+            // If target dies and attacker survives in melee combat, move attacker to target's position
+            if (target.currentHp <= 0 && attacker.currentHp > 0) {
+                attacker.position = { ...targetPosition };
+            }
         } else {
             // Ranged combat: only attacker deals damage
             damageToTarget = Math.max(0, attacker.attack - target.defense);
