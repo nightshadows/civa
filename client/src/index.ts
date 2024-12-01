@@ -5,6 +5,36 @@ import { RestApiClient } from './api-client';
 const use3D = new URLSearchParams(window.location.search).has('3d');
 const api = new RestApiClient();
 
+// At the top of the file, after existing variables
+const toggle3dCheckbox = document.getElementById('toggle3d') as HTMLInputElement;
+
+// Initialize checkbox state from URL
+toggle3dCheckbox.checked = use3D;
+
+// Add event listener for the 3D toggle
+toggle3dCheckbox.addEventListener('change', (e) => {
+    const is3dMode = (e.target as HTMLInputElement).checked;
+    const url = new URL(window.location.href);
+    
+    if (is3dMode) {
+        url.searchParams.set('3d', '');
+    } else {
+        url.searchParams.delete('3d');
+    }
+    
+    window.history.replaceState({}, '', url.toString());
+    
+    // Update all game links
+    document.querySelectorAll('.join-button').forEach(button => {
+        const gameId = button.getAttribute('data-gameid');
+        if (gameId) {
+            (button as HTMLElement).onclick = () => {
+                window.location.href = `game.html?gameId=${gameId}${is3dMode ? '&3d' : ''}`;
+            };
+        }
+    });
+});
+
 // Add this function to update the UI based on player state
 async function updatePlayerUI() {
     const player = await api.getPlayer();

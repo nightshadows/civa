@@ -81,6 +81,20 @@
             font-weight: 500;
             color: #666;
         }
+        .toggle-3d {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            cursor: pointer;
+            padding: 4px 8px;
+            background: #f0f0f0;
+            border-radius: 4px;
+            user-select: none;
+        }
+
+        .toggle-3d input {
+            margin: 0;
+        }
     </style>
 </head>
 <body>
@@ -88,6 +102,10 @@
         <div style="display: flex; justify-content: space-between; align-items: center;">
             <h1>Available Games</h1>
             <div class="user-section">
+                <label class="toggle-3d">
+                    <input type="checkbox" id="toggle3d" />
+                    3D
+                </label>
                 <span id="playerName" class="player-name"></span>
                 <a href="./login.html" class="login-link" id="loginLink">Login</a>
                 <button class="login-link" id="logoutButton" style="display: none; border: none;">Logout</button>
