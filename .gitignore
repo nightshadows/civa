@@ -50,7 +50,6 @@ Thumbs.db
 
 # Cloudlfare
 .wrangler/
-.dev.vars
 
 # Game data in node.js
 server/data/
