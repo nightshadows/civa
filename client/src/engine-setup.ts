@@ -31,9 +31,21 @@ export class GameSetup {
 
     private static createCanvas(width = this.DEFAULT_WIDTH, height = this.DEFAULT_HEIGHT): HTMLCanvasElement {
         const canvas = document.createElement('canvas');
-        canvas.width = width;
-        canvas.height = height;
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+        canvas.style.width = '100%';
+        canvas.style.height = '100%';
+        canvas.style.position = 'absolute';
+        canvas.style.top = '0';
+        canvas.style.left = '0';
         document.body.appendChild(canvas);
+
+        // Handle window resizing
+        window.addEventListener('resize', () => {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+        });
+
         return canvas;
     }
 
