@@ -393,11 +393,10 @@ export class BabylonGameScene {
         this.selectedUnitMesh.material = highlightMaterial;
     }
 
-    private centerCameraOnPosition(position: Vector3, duration: number = 1000): void {
+    private centerCameraOnPosition(position: Vector3, duration: number = 2000): void {  // Increased duration to 2000ms
         // Get current camera target
         const startTarget = this.camera.target.clone();
         const endTarget = position;
-        // Animation frame
         let startTime: number | null = null;
 
         const animate = (currentTime: number) => {
@@ -405,8 +404,10 @@ export class BabylonGameScene {
             const elapsed = currentTime - startTime;
             const progress = Math.min(elapsed / duration, 1);
 
-            // Smooth easing
-            const easeProgress = 1 - Math.pow(1 - progress, 3);
+            // Using a smoother easing function
+            const easeProgress = progress < 0.5
+                ? 4 * progress * progress * progress
+                : 1 - Math.pow(-2 * progress + 2, 3) / 2;
 
             // Interpolate position
             const newX = startTarget.x + (endTarget.x - startTarget.x) * easeProgress;
