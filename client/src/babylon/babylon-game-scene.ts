@@ -1,10 +1,11 @@
 import { Engine, Scene, ArcRotateCamera, Vector3, HemisphericLight, Material, MeshBuilder, StandardMaterial, Color3, TransformNode, Vector2, DynamicTexture, Mesh, FresnelParameters, Animation, Viewport, Matrix } from '@babylonjs/core';
-import { TileType, Position, GameState, UnitType, Unit } from '@shared/types';
+import { TileType, Position, GameState, UnitType, Unit, CombatType } from '@shared/types';
 import { BabylonHexGrid } from './babylon-hex-grid';
 import { BabylonUIPanel } from './babylon-ui-panel';
 import { GameActions, GameEventEmitter } from '../game';
 import { BabylonView } from './babylon-view';
 import { BabylonHexMeshFactory } from './babylon-hex-mesh-factory';
+import { getHexDistance } from '@shared/hex-utils';
 
 export class BabylonGameScene {
     private scene: Scene;
@@ -239,20 +240,28 @@ export class BabylonGameScene {
     }
 
     private handleHexClick(hexPos: Position) {
-        console.info('Hex clicked', hexPos);
         if (!this.currentGameState) return;
 
         const clickedUnit = this.getVisibleUnits().find(u =>
             u.position.x === hexPos.x && u.position.y === hexPos.y
         );
+        console.info('Clicked unit', clickedUnit);
 
         if (clickedUnit) {
             if (clickedUnit.playerId === this.playerId) {
-                // Select the clicked unit
+                // Select own unit
                 this.selectedUnit = clickedUnit;
                 this.highlightSelectedUnit(clickedUnit);
                 if (clickedUnit.movementPoints > 0) {
-                    this.showMovementRange(clickedUnit);
+                    this.showAuxInfo(clickedUnit);
+                }
+            } else if (this.selectedUnit && this.selectedUnit.movementPoints > 0) {
+                // Check if target is within attack range
+                const distance = getHexDistance(this.selectedUnit.position, clickedUnit.position);
+                const canAttack = this.canAttackTarget(this.selectedUnit, clickedUnit, distance);
+
+                if (canAttack) {
+                    this.gameActions!.attackUnit(this.selectedUnit.id, clickedUnit.id);
                 }
             }
         } else if (this.selectedUnit && this.selectedUnit.movementPoints > 0) {
@@ -499,5 +508,57 @@ export class BabylonGameScene {
         this.camera.radius = requiredDistance;
         this.camera.alpha = Math.PI / 4; // 45 degrees
         this.camera.beta = Math.PI / 3;  // 60 degrees
+    }
+
+    private canAttackTarget(attacker: Unit, defender: Unit, distance: number): boolean {
+        if (attacker.combatType === CombatType.MELEE) {
+            return distance === 1;
+        } else if (attacker.combatType === CombatType.RANGED) {
+            return distance <= (attacker.range || 1);
+        }
+        return false;
+    }
+
+    private showAttackRange(unit: Unit): void {
+        if (!this.currentGameState || unit.movementPoints === 0) return;
+
+        // Get all enemy units
+        const enemyUnits = this.currentGameState.visibleUnits.filter(u =>
+            u.playerId !== unit.playerId
+        );
+
+        // Check each enemy unit if it's in attack range
+        enemyUnits.forEach(enemyUnit => {
+            const distance = getHexDistance(unit.position, enemyUnit.position);
+            if (this.canAttackTarget(unit, enemyUnit, distance)) {
+                const worldPos = this.view.hexToWorld(enemyUnit.position);
+                const highlight = this.createAttackHighlight(worldPos);
+                this.highlightedHexes.push(highlight);
+            }
+        });
+    }
+
+    private createAttackHighlight(worldPos: Vector2): TransformNode {
+        const material = new StandardMaterial("attackHighlightMat", this.scene);
+        material.diffuseColor = new Color3(1, 0, 0); // Red color
+        material.alpha = 0.3;
+        material.emissiveColor = new Color3(0.5, 0, 0); // Red glow
+
+        const highlight = MeshBuilder.CreateCylinder("attackHighlight", {
+            height: 0.1,
+            diameter: this.hexSize * 2,
+            tessellation: 6
+        }, this.scene);
+
+        highlight.material = material;
+        highlight.position = new Vector3(worldPos.x, 0.1, worldPos.y);
+
+        return highlight;
+    }
+
+    private showAuxInfo(unit: Unit): void {
+        this.clearHighlights();
+        this.showMovementRange(unit);
+        this.showAttackRange(unit);
     }
 }
