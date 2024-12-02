@@ -7,15 +7,11 @@ export class BabylonUIPanel {
     private unitInfoTexts: TextBlock[] = [];
     private turnInfo?: TextBlock;
     private turnNumberText!: TextBlock;
-    private fortifyButton!: Rectangle;
-    private levelUpButton!: Rectangle;
     private endTurnButton!: Rectangle;
     private menuButton!: Rectangle;
     private playerList!: TextBlock;
     private mainPanel!: StackPanel;
     private onEndTurn?: () => void;
-    private onFortifyUnit?: () => void;
-    private onLevelUpUnit?: () => void;
 
     constructor(scene: Scene) {
         this.advancedTexture = AdvancedDynamicTexture.CreateFullscreenUI("UI", true, scene);
@@ -92,57 +88,21 @@ export class BabylonUIPanel {
     }
 
     private createButtons() {
-        const buttonContainer = new StackPanel();
-        buttonContainer.horizontalAlignment = Control.HORIZONTAL_ALIGNMENT_RIGHT;
-        buttonContainer.verticalAlignment = Control.VERTICAL_ALIGNMENT_BOTTOM;
-        buttonContainer.isVertical = false;
-        buttonContainer.height = "40px";
-        buttonContainer.paddingRight = "20px";
-        buttonContainer.paddingBottom = "10px";
-
-        // Create End Turn button
-        this.endTurnButton = new Rectangle("endTurnBtn");
-        this.endTurnButton.width = "100px";
-        this.endTurnButton.height = "30px";
-        this.endTurnButton.background = "#666666";
-        this.endTurnButton.cornerRadius = 5;
-        this.endTurnButton.thickness = 0;
-
-        const endTurnText = new TextBlock();
-        endTurnText.text = "End Turn";
-        endTurnText.color = "white";
-        this.endTurnButton.addControl(endTurnText);
-
-        // Create Fortify button
-        this.fortifyButton = new Rectangle("fortifyBtn");
-        this.fortifyButton.width = "100px";
-        this.fortifyButton.height = "30px";
-        this.fortifyButton.background = "#666666";
-        this.fortifyButton.cornerRadius = 5;
-        this.fortifyButton.thickness = 0;
-
-        const fortifyText = new TextBlock();
-        fortifyText.text = "Fortify";
-        fortifyText.color = "white";
-        this.fortifyButton.addControl(fortifyText);
-
-        // Create Level Up button
-        this.levelUpButton = new Rectangle("levelUpBtn");
-        this.levelUpButton.width = "100px";
-        this.levelUpButton.height = "30px";
-        this.levelUpButton.background = "#666666";
-        this.levelUpButton.cornerRadius = 5;
-        this.levelUpButton.thickness = 0;
-
-        const levelUpText = new TextBlock();
-        levelUpText.text = "Level Up";
-        levelUpText.color = "white";
-        this.levelUpButton.addControl(levelUpText);
+        // Create Menu button container (left side)
+        const menuContainer = new StackPanel();
+        menuContainer.width = "200px";  // Added fixed width
+        menuContainer.horizontalAlignment = Control.HORIZONTAL_ALIGNMENT_LEFT;
+        menuContainer.verticalAlignment = Control.VERTICAL_ALIGNMENT_BOTTOM;
+        menuContainer.height = "40px";
+        menuContainer.paddingLeft = "20px";
+        menuContainer.paddingBottom = "10px";
+        menuContainer.isVertical = false;  // Make sure it's horizontal
 
         // Create Menu button
         this.menuButton = new Rectangle("menuBtn");
         this.menuButton.width = "100px";
         this.menuButton.height = "30px";
+        this.menuButton.horizontalAlignment = Control.HORIZONTAL_ALIGNMENT_LEFT;  // Added explicit alignment
         this.menuButton.background = "#666666";
         this.menuButton.cornerRadius = 5;
         this.menuButton.thickness = 0;
@@ -152,31 +112,43 @@ export class BabylonUIPanel {
         menuText.color = "white";
         this.menuButton.addControl(menuText);
 
-        // Add buttons from left to right
-        buttonContainer.addControl(this.fortifyButton);
-        buttonContainer.addControl(this.levelUpButton);
-        buttonContainer.addControl(this.endTurnButton);
-        buttonContainer.addControl(this.menuButton);
+        menuContainer.addControl(this.menuButton);
 
-        this.advancedTexture.addControl(buttonContainer);
+        // Create End Turn button container (right side)
+        const endTurnContainer = new StackPanel();
+        endTurnContainer.width = "200px";  // Added fixed width
+        endTurnContainer.horizontalAlignment = Control.HORIZONTAL_ALIGNMENT_RIGHT;
+        endTurnContainer.verticalAlignment = Control.VERTICAL_ALIGNMENT_BOTTOM;
+        endTurnContainer.height = "40px";
+        endTurnContainer.paddingRight = "20px";
+        endTurnContainer.paddingBottom = "10px";
+        endTurnContainer.isVertical = false;  // Make sure it's horizontal
+
+        // Create End Turn button
+        this.endTurnButton = new Rectangle("endTurnBtn");
+        this.endTurnButton.width = "100px";
+        this.endTurnButton.height = "30px";
+        this.endTurnButton.horizontalAlignment = Control.HORIZONTAL_ALIGNMENT_RIGHT;  // Added explicit alignment
+        this.endTurnButton.background = "#666666";
+        this.endTurnButton.cornerRadius = 5;
+        this.endTurnButton.thickness = 0;
+
+        const endTurnText = new TextBlock();
+        endTurnText.text = "End Turn";
+        endTurnText.color = "white";
+        this.endTurnButton.addControl(endTurnText);
+
+        endTurnContainer.addControl(this.endTurnButton);
+
+        // Add both containers to the UI
+        this.advancedTexture.addControl(menuContainer);
+        this.advancedTexture.addControl(endTurnContainer);
     }
 
     private setupButtonHandlers() {
         this.endTurnButton.onPointerClickObservable.add(() => {
             if (this.onEndTurn) {
                 this.onEndTurn();
-            }
-        });
-
-        this.fortifyButton.onPointerClickObservable.add(() => {
-            if (this.onFortifyUnit) {
-                this.onFortifyUnit();
-            }
-        });
-
-        this.levelUpButton.onPointerClickObservable.add(() => {
-            if (this.onLevelUpUnit) {
-                this.onLevelUpUnit();
             }
         });
 
@@ -187,19 +159,13 @@ export class BabylonUIPanel {
 
     public setCallbacks(callbacks: {
         onEndTurn: () => void;
-        onFortifyUnit: () => void;
-        onLevelUpUnit: () => void;
     }) {
         this.onEndTurn = callbacks.onEndTurn;
-        this.onFortifyUnit = callbacks.onFortifyUnit;
-        this.onLevelUpUnit = callbacks.onLevelUpUnit;
     }
 
     public updateUnitInfo(unit: Unit | null) {
         if (!unit) {
             this.unitInfoTexts.forEach(text => text.text = "");
-            this.fortifyButton.background = "#666666";
-            this.levelUpButton.background = "#666666";
             return;
         }
 
@@ -220,10 +186,6 @@ export class BabylonUIPanel {
 
         this.unitInfoTexts[4].text = `Movement: ${unit.movementPoints}  Vision: ${unit.visionRange}`;
         this.unitInfoTexts[4].color = "#ffffff";
-
-        // Update button states
-        this.fortifyButton.background = unit.movementPoints > 0 ? "#44aa44" : "#666666";
-        this.levelUpButton.background = unit.currentExp >= unit.expNeeded ? "#44aa44" : "#666666";
     }
 
     public updateTurnInfo(currentPlayerId: string, myPlayerId: string, turnNumber: number) {
