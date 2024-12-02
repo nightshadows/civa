@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Create New Game</title>
+    <style>
+        .container {
+            max-width: 600px;
+            margin: 2rem auto;
+            padding: 2rem;
+            background-color: #fff;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        h1 {
+            text-align: center;
+            color: #333;
+            margin-bottom: 2rem;
+        }
+
+        .error {
+            color: #dc3545;
+            padding: 0.5rem;
+            margin-bottom: 1rem;
+            border-radius: 4px;
+            background-color: #f8d7da;
+        }
+
+        .create-game-form {
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+        }
+
+        .form-group {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+
+        label {
+            font-weight: 500;
+            color: #444;
+        }
+
+        select, input[type="number"] {
+            padding: 0.5rem;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 1rem;
+        }
+
+        small {
+            color: #666;
+            font-size: 0.875rem;
+        }
+
+        .button-group {
+            display: flex;
+            gap: 1rem;
+            justify-content: flex-end;
+            margin-top: 1rem;
+        }
+
+        button {
+            padding: 0.5rem 1.5rem;
+            border: none;
+            border-radius: 4px;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+
+        button.primary {
+            background-color: #007bff;
+            color: white;
+        }
+
+        button.primary:hover {
+            background-color: #0056b3;
+        }
+
+        button.secondary {
+            background-color: #6c757d;
+            color: white;
+        }
+
+        button.secondary:hover {
+            background-color: #545b62;
+        }
+
+        /* Checkbox styling */
+        input[type="checkbox"] {
+            margin-right: 0.5rem;
+        }
+
+        /* Responsive adjustments */
+        @media (max-width: 640px) {
+            .container {
+                margin: 1rem;
+                padding: 1rem;
+            }
+
+            .button-group {
+                flex-direction: column;
+            }
+
+            button {
+                width: 100%;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Create New Game</h1>
+        <div id="errorMessage" class="error" style="display: none;"></div>
+        
+        <form id="createGameForm" class="create-game-form">
+            <div class="form-group">
+                <label for="boardSize">Board Size:</label>
+                <select name="boardSize" id="boardSize">
+                    <option value="9">9×9</option>
+                    <option value="13">13×13</option>
+                    <option value="19" selected>19×19</option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label for="maxPlayers">Maximum Players:</label>
+                <input type="number" id="maxPlayers" name="maxPlayers" min="2" max="4" value="2">
+            </div>
+
+            <div class="form-group">
+                <label>
+                    <input type="checkbox" id="addAiPlayer" name="addAiPlayer">
+                    Add AI Player
+                </label>
+            </div>
+
+            <div class="button-group">
+                <button type="button" id="cancelButton" class="secondary">Cancel</button>
+                <button type="submit" class="primary">Create Game</button>
+            </div>
+        </form>
+    </div>
+    <script type="module" src="./create-game.ts"></script>
+</body>
+</html> 

@@ -139,13 +139,9 @@ const updateGamesList = async () => {
     }
 };
 
-// Create game button handler
-document.getElementById('createGame')?.addEventListener('click', async () => {
-    const newGameId = generateGameId();
-    const addAiPlayer = (document.getElementById('addAiPlayer') as HTMLInputElement).checked;
-
-    await api.createGame(newGameId, addAiPlayer);
-    window.location.href = `game.html?gameId=${newGameId}${use3D ? '&3d' : ''}`;
+// Modify the create game button handler
+document.getElementById('createGame')?.addEventListener('click', () => {
+    window.location.href = `create-game.html${use3D ? '?3d' : ''}`;
 });
 
 // Update logout button handler
