@@ -1,8 +1,8 @@
-import { Engine, Scene, ArcRotateCamera, Vector3, HemisphericLight, Material, MeshBuilder, StandardMaterial, Color3, TransformNode, Vector2, DynamicTexture, Mesh, FresnelParameters, Animation } from '@babylonjs/core';
+import { Engine, Scene, ArcRotateCamera, Vector3, HemisphericLight, Material, MeshBuilder, StandardMaterial, Color3, TransformNode, Vector2, DynamicTexture, Mesh, FresnelParameters, Animation, Viewport, Matrix } from '@babylonjs/core';
 import { TileType, Position, GameState, UnitType, Unit } from '@shared/types';
 import { BabylonHexGrid } from './babylon-hex-grid';
 import { BabylonUIPanel } from './babylon-ui-panel';
-import { GameActions, GameEventEmitter } from 'src/engine-setup';
+import { GameActions, GameEventEmitter } from '../game';
 import { BabylonView } from './babylon-view';
 import { BabylonHexMeshFactory } from './babylon-hex-mesh-factory';
 
@@ -45,13 +45,45 @@ export class BabylonGameScene {
             this.scene
         );
 
+        // Disable default keyboard rotation controls
+        this.camera.keysUp = [];
+        this.camera.keysDown = [];
+        this.camera.keysLeft = [];
+        this.camera.keysRight = [];
+
+        // Add custom keyboard controls for panning
+        this.scene.onKeyboardObservable.add((kbInfo) => {
+            const panSpeed = 2.0;
+            const up = Vector3.Cross(this.camera.getDirection(Vector3.Right()), Vector3.Up()).scaleInPlace(this.camera.radius / 10);
+            const right = this.camera.getDirection(Vector3.Right()).scaleInPlace(this.camera.radius / 10);
+
+            switch (kbInfo.type) {
+                case 1: // KeyboardEventTypes.KEYDOWN
+                    switch (kbInfo.event.key) {
+                        case "ArrowUp":
+                            this.camera.target.addInPlace(up.scale(panSpeed));
+                            break;
+                        case "ArrowDown":
+                            this.camera.target.addInPlace(up.scale(-panSpeed));
+                            break;
+                        case "ArrowLeft":
+                            this.camera.target.addInPlace(right.scale(-panSpeed));
+                            break;
+                        case "ArrowRight":
+                            this.camera.target.addInPlace(right.scale(panSpeed));
+                            break;
+                    }
+                    break;
+            }
+        });
+
+        this.camera.attachControl(canvas, true);
+
         // Set camera limits
         this.camera.lowerRadiusLimit = 5;
         this.camera.upperRadiusLimit = 100;
         this.camera.lowerBetaLimit = 0.1;
         this.camera.upperBetaLimit = Math.PI / 2;
-
-        this.camera.attachControl(canvas, true);
 
         // Add lighting
         const light = new HemisphericLight("light", new Vector3(0, 1, 0), this.scene);
@@ -88,15 +120,6 @@ export class BabylonGameScene {
             onEndTurn: () => {
                 this.gameActions!.endTurn();
             },
-            onFortifyUnit: () => {
-                if (this.selectedUnit) {
-                    this.gameActions!.fortifyUnit(this.selectedUnit.id);
-                }
-            },
-            onLevelUpUnit: () => {
-                // Implement level up logic when needed
-                console.log('Level up not implemented yet');
-            }
         });
 
         // Subscribe to game state updates
@@ -393,35 +416,56 @@ export class BabylonGameScene {
         this.selectedUnitMesh.material = highlightMaterial;
     }
 
-    private centerCameraOnPosition(position: Vector3, duration: number = 2000): void {  // Increased duration to 2000ms
-        // Get current camera target
+    private centerCameraOnPosition(position: Vector3, duration: number = 2000): void {
+        // Get current camera target and screen dimensions
         const startTarget = this.camera.target.clone();
-        const endTarget = position;
-        let startTime: number | null = null;
+        const screenWidth = this.engine.getRenderWidth();
+        const screenHeight = this.engine.getRenderHeight();
 
-        const animate = (currentTime: number) => {
-            if (!startTime) startTime = currentTime;
-            const elapsed = currentTime - startTime;
-            const progress = Math.min(elapsed / duration, 1);
+        // Create viewport for projection
+        const viewport = new Viewport(0, 0, screenWidth, screenHeight);
 
-            // Using a smoother easing function
-            const easeProgress = progress < 0.5
-                ? 4 * progress * progress * progress
-                : 1 - Math.pow(-2 * progress + 2, 3) / 2;
+        // Convert world position to screen coordinates
+        const screenPos = Vector3.Project(
+            position,
+            Matrix.Identity(),
+            this.scene.getTransformMatrix(),
+            viewport
+        );
 
-            // Interpolate position
-            const newX = startTarget.x + (endTarget.x - startTarget.x) * easeProgress;
-            const newY = startTarget.y + (endTarget.y - startTarget.y) * easeProgress;
-            const newZ = startTarget.z + (endTarget.z - startTarget.z) * easeProgress;
+        // Calculate how far off center the target is as a percentage
+        const centerOffsetX = Math.abs((screenPos.x - screenWidth / 2) / screenWidth);
+        const centerOffsetY = Math.abs((screenPos.y - screenHeight / 2) / screenHeight);
 
-            this.camera.target = new Vector3(newX, newY, newZ);
+        // Only move camera if target is beyond 25% of screen size from center
+        if (centerOffsetX > 0.25 || centerOffsetY > 0.25) {
+            const endTarget = position;
+            let startTime: number | null = null;
 
-            if (progress < 1) {
-                requestAnimationFrame(animate);
-            }
-        };
+            const animate = (currentTime: number) => {
+                if (!startTime) startTime = currentTime;
+                const elapsed = currentTime - startTime;
+                const progress = Math.min(elapsed / duration, 1);
 
-        requestAnimationFrame(animate);
+                // Using a smoother easing function
+                const easeProgress = progress < 0.5
+                    ? 4 * progress * progress * progress
+                    : 1 - Math.pow(-2 * progress + 2, 3) / 2;
+
+                // Interpolate position
+                const newX = startTarget.x + (endTarget.x - startTarget.x) * easeProgress;
+                const newY = startTarget.y + (endTarget.y - startTarget.y) * easeProgress;
+                const newZ = startTarget.z + (endTarget.z - startTarget.z) * easeProgress;
+
+                this.camera.target = new Vector3(newX, newY, newZ);
+
+                if (progress < 1) {
+                    requestAnimationFrame(animate);
+                }
+            };
+
+            requestAnimationFrame(animate);
+        }
     }
 
     private centerCameraOnVisibleTiles(tiles: { position: Position }[]): void {

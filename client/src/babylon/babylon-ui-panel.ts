@@ -56,7 +56,7 @@ export class BabylonUIPanel {
         // Create unit info container
         const unitInfoContainer = new StackPanel();
         unitInfoContainer.horizontalAlignment = Control.HORIZONTAL_ALIGNMENT_LEFT;
-        unitInfoContainer.paddingLeft = "20px";
+        unitInfoContainer.paddingLeft = "140px";
 
         // Create unit info texts
         for (let i = 0; i < 5; i++) {
@@ -90,19 +90,19 @@ export class BabylonUIPanel {
     private createButtons() {
         // Create Menu button container (left side)
         const menuContainer = new StackPanel();
-        menuContainer.width = "200px";  // Added fixed width
+        menuContainer.width = "200px";
         menuContainer.horizontalAlignment = Control.HORIZONTAL_ALIGNMENT_LEFT;
         menuContainer.verticalAlignment = Control.VERTICAL_ALIGNMENT_BOTTOM;
-        menuContainer.height = "40px";
+        menuContainer.height = "60px";  // Increased from 40px
         menuContainer.paddingLeft = "20px";
         menuContainer.paddingBottom = "10px";
-        menuContainer.isVertical = false;  // Make sure it's horizontal
+        menuContainer.isVertical = false;
 
         // Create Menu button
         this.menuButton = new Rectangle("menuBtn");
         this.menuButton.width = "100px";
-        this.menuButton.height = "30px";
-        this.menuButton.horizontalAlignment = Control.HORIZONTAL_ALIGNMENT_LEFT;  // Added explicit alignment
+        this.menuButton.height = "45px";  // Increased from 30px
+        this.menuButton.horizontalAlignment = Control.HORIZONTAL_ALIGNMENT_LEFT;
         this.menuButton.background = "#666666";
         this.menuButton.cornerRadius = 5;
         this.menuButton.thickness = 0;
@@ -110,25 +110,26 @@ export class BabylonUIPanel {
         const menuText = new TextBlock();
         menuText.text = "Menu";
         menuText.color = "white";
+        menuText.fontSize = 18;  // Added larger font size
         this.menuButton.addControl(menuText);
 
         menuContainer.addControl(this.menuButton);
 
         // Create End Turn button container (right side)
         const endTurnContainer = new StackPanel();
-        endTurnContainer.width = "200px";  // Added fixed width
+        endTurnContainer.width = "200px";
         endTurnContainer.horizontalAlignment = Control.HORIZONTAL_ALIGNMENT_RIGHT;
         endTurnContainer.verticalAlignment = Control.VERTICAL_ALIGNMENT_BOTTOM;
-        endTurnContainer.height = "40px";
+        endTurnContainer.height = "60px";  // Increased from 40px
         endTurnContainer.paddingRight = "20px";
         endTurnContainer.paddingBottom = "10px";
-        endTurnContainer.isVertical = false;  // Make sure it's horizontal
+        endTurnContainer.isVertical = false;
 
         // Create End Turn button
         this.endTurnButton = new Rectangle("endTurnBtn");
         this.endTurnButton.width = "100px";
-        this.endTurnButton.height = "30px";
-        this.endTurnButton.horizontalAlignment = Control.HORIZONTAL_ALIGNMENT_RIGHT;  // Added explicit alignment
+        this.endTurnButton.height = "45px";  // Increased from 30px
+        this.endTurnButton.horizontalAlignment = Control.HORIZONTAL_ALIGNMENT_RIGHT;
         this.endTurnButton.background = "#666666";
         this.endTurnButton.cornerRadius = 5;
         this.endTurnButton.thickness = 0;
@@ -136,6 +137,7 @@ export class BabylonUIPanel {
         const endTurnText = new TextBlock();
         endTurnText.text = "End Turn";
         endTurnText.color = "white";
+        endTurnText.fontSize = 18;  // Added larger font size
         this.endTurnButton.addControl(endTurnText);
 
         endTurnContainer.addControl(this.endTurnButton);
