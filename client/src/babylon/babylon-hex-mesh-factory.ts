@@ -311,6 +311,23 @@ export class BabylonHexMeshFactory {
 
     public createUnitMesh(unit: Unit, playerId?: string): TransformNode {
         const container = new TransformNode("unitContainer", this.scene);
+        
+        // Add glowing border
+        const borderMaterial = new StandardMaterial("borderMat", this.scene);
+        borderMaterial.emissiveColor = unit.playerId === playerId ? 
+            new Color3(0.2, 1, 0.2) :  // Green glow for friendly
+            new Color3(1, 0.2, 0.2);   // Red glow for enemy
+        borderMaterial.alpha = 0.6;
+
+        const border = MeshBuilder.CreateCylinder("border", {
+            height: 0.15,
+            diameter: this.hexSize * 2.1, // Slightly larger than hex
+            tessellation: 6
+        }, this.scene);
+        border.material = borderMaterial;
+        border.parent = container;
+        border.position.y = 0.05;
+
         const isPlayerUnit = unit.playerId === playerId;
 
         // Common materials
