@@ -98,14 +98,19 @@ export class Game {
         const warriorPos = findValidSpawnPosition(baseX, baseY);
         const warrior = createUnit(UnitType.WARRIOR, playerId, warriorPos);
         units.push(warrior);
-        this.units.push(warrior);  // Add to game units immediately
+        this.units.push(warrior);
 
         // Create and place archer
         const archerPos = findValidSpawnPosition(warriorPos.x, warriorPos.y);
         const archer = createUnit(UnitType.ARCHER, playerId, archerPos);
         units.push(archer);
 
-        // Remove warrior from game units (it will be added back with archer when returned)
+        // Create and place settler
+        const settlerPos = findValidSpawnPosition(warriorPos.x, warriorPos.y);
+        const settler = createUnit(UnitType.SETTLER, playerId, settlerPos);
+        units.push(settler);
+
+        // Remove warrior from game units (it will be added back with all units when returned)
         this.units.pop();
 
         return units;
@@ -612,5 +617,48 @@ export class Game {
 
         // Remove dead units from the game
         this.units = this.units.filter(unit => unit.currentHp > 0);
+    }
+
+    public settleCity(unitId: string): { success: boolean; error?: string } {
+        const settler = this.units.find(u => u.id === unitId);
+
+        if (!settler) {
+            return { success: false, error: 'Unit not found' };
+        }
+
+        if (settler.type !== UnitType.SETTLER) {
+            return { success: false, error: 'Only settlers can found cities' };
+        }
+
+        if (!this.isPlayerTurn(settler.playerId)) {
+            return { success: false, error: 'Not player turn' };
+        }
+
+        if (settler.movementPoints <= 0) {
+            return { success: false, error: 'No movement points' };
+        }
+
+        // Check if the terrain is valid for city settlement
+        const terrain = this.map[settler.position.y][settler.position.x];
+        if (terrain === TileType.WATER) {
+            return { success: false, error: 'Cannot settle city on water' };
+        }
+
+        // TODO: Add actual city creation logic here when city system is implemented
+
+        // Remove the settler unit
+        this.units = this.units.filter(u => u.id !== unitId);
+
+        // Add to history
+        this.addToHistory({
+            type: 'SETTLE_CITY',
+            playerId: settler.playerId,
+            payload: {
+                unitId: settler.id,
+                to: settler.position
+            }
+        });
+
+        return { success: true };
     }
 }

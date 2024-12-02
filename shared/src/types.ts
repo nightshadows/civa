@@ -8,11 +8,13 @@ export enum TileType {
 export enum UnitType {
     WARRIOR = 'WARRIOR',
     ARCHER = 'ARCHER',
+    SETTLER = 'SETTLER'
 }
 
 export enum CombatType {
     MELEE = 'MELEE',
     RANGED = 'RANGED',
+    NONE = 'NONE'
 }
 
 export interface Position {
@@ -62,7 +64,7 @@ export interface GameState {
 }
 
 export interface GameAction {
-    type: 'MOVE_UNIT' | 'END_TURN' | 'FORTIFY_UNIT' | 'ATTACK_UNIT' | 'UNIT_DIED';
+    type: 'MOVE_UNIT' | 'END_TURN' | 'FORTIFY_UNIT' | 'ATTACK_UNIT' | 'UNIT_DIED' | 'SETTLE_CITY';
     playerId: string;
     timestamp: number;
     payload?: {

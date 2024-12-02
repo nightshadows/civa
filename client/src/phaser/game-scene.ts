@@ -221,7 +221,20 @@ export class GameScene extends Phaser.Scene {
 
         // Create unit sprite
         const isMyUnit = unit.playerId === this.playerId;
-        const spriteKey = unit.type === UnitType.WARRIOR ? 'warrior' : 'archer';
+        let spriteKey;
+        switch (unit.type) {
+            case UnitType.WARRIOR:
+                spriteKey = 'warrior';
+                break;
+            case UnitType.ARCHER:
+                spriteKey = 'archer';
+                break;
+            case UnitType.SETTLER:
+                spriteKey = 'settler';
+                break;
+            default:
+                spriteKey = 'warrior';
+        }
         const sprite = this.add.sprite(0, 0, spriteKey);
 
         if (!isMyUnit) {
@@ -540,6 +553,12 @@ export class GameScene extends Phaser.Scene {
 
         // Load archer sprite
         this.load.spritesheet('archer', 'assets/archer.png', {
+            frameWidth: 32,
+            frameHeight: 32
+        });
+
+        // Load settler sprite
+        this.load.spritesheet('settler', 'assets/settler.png', {
             frameWidth: 32,
             frameHeight: 32
         });

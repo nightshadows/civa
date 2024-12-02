@@ -99,7 +99,7 @@ export class BabylonHexMeshFactory {
 
     private createWaterHex(container: TransformNode): void {
         const hexMaterial = new StandardMaterial("waterMat", this.scene);
-        
+
         // Water-specific material properties
         hexMaterial.diffuseColor = new Color3(0.2, 0.4, 0.8);
         hexMaterial.specularColor = new Color3(0.2, 0.2, 0.4);
@@ -312,7 +312,7 @@ export class BabylonHexMeshFactory {
     public createUnitMesh(unit: Unit, playerId?: string): TransformNode {
         const container = new TransformNode("unitContainer", this.scene);
         const isPlayerUnit = unit.playerId === playerId;
-        
+
         // Common materials
         const metalMaterial = new StandardMaterial("metalMat", this.scene);
         metalMaterial.diffuseColor = new Color3(0.7, 0.7, 0.8);
@@ -323,7 +323,7 @@ export class BabylonHexMeshFactory {
         leatherMaterial.diffuseColor = new Color3(0.4, 0.3, 0.2);
 
         const teamMaterial = new StandardMaterial("teamMat", this.scene);
-        teamMaterial.diffuseColor = isPlayerUnit ? 
+        teamMaterial.diffuseColor = isPlayerUnit ?
             new Color3(0.2, 0.5, 0.2) : // Green for player
             new Color3(0.7, 0.2, 0.2);  // Red for enemy
 
@@ -461,8 +461,52 @@ export class BabylonHexMeshFactory {
                 arrow.position.x = 0.02 * i;
                 arrow.position.y = 0.1;
             }
+        } else if (unit.type === UnitType.SETTLER) {
+            // Body
+            const body = MeshBuilder.CreateCylinder("body", {
+                height: 0.5,
+                diameter: 0.25,
+                tessellation: 8
+            }, this.scene);
+            body.material = teamMaterial;
+            body.parent = container;
+            body.position.y = 0.25;
+
+            // Cart
+            const cart = MeshBuilder.CreateBox("cart", {
+                height: 0.2,
+                width: 0.4,
+                depth: 0.3
+            }, this.scene);
+            cart.material = leatherMaterial;
+            cart.parent = container;
+            cart.position.y = 0.3;
+
+            // Wheels (2 on each side)
+            for (let i = 0; i < 2; i++) {
+                const wheel = MeshBuilder.CreateCylinder("wheel", {
+                    height: 0.05,
+                    diameter: 0.15,
+                    tessellation: 12
+                }, this.scene);
+                wheel.material = metalMaterial;
+                wheel.parent = cart;
+                wheel.rotation.z = Math.PI / 2;
+                wheel.position.z = i === 0 ? 0.15 : -0.15;
+                wheel.position.y = -0.1;
+            }
+
+            // Tools on cart (simplified as boxes)
+            const tools = MeshBuilder.CreateBox("tools", {
+                height: 0.1,
+                width: 0.3,
+                depth: 0.2
+            }, this.scene);
+            tools.material = metalMaterial;
+            tools.parent = cart;
+            tools.position.y = 0.1;
         }
 
         return container;
     }
-} 
+}

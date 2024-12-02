@@ -33,6 +33,16 @@ const UNIT_TEMPLATES: Record<UnitType, UnitTemplate> = {
         baseDefense: 5,
         expNeededBase: 100,
         range: 2
+    },
+    [UnitType.SETTLER]: {
+        type: UnitType.SETTLER,
+        combatType: CombatType.NONE,
+        movementPoints: 2,
+        visionRange: 3,
+        maxHp: 30,
+        baseAttack: 0,
+        baseDefense: 5,
+        expNeededBase: 1000
     }
 };
 
@@ -67,6 +77,10 @@ export function getStartingUnits(playerId: string, basePosition: Position): Unit
         createUnit(UnitType.WARRIOR, playerId, basePosition),
         createUnit(UnitType.ARCHER, playerId, {
             x: basePosition.x,
+            y: basePosition.y + 1
+        }),
+        createUnit(UnitType.SETTLER, playerId, {
+            x: basePosition.x + 1,
             y: basePosition.y + 1
         })
     ];
