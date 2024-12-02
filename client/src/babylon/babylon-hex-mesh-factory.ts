@@ -479,49 +479,99 @@ export class BabylonHexMeshFactory {
                 arrow.position.y = 0.1;
             }
         } else if (unit.type === UnitType.SETTLER) {
-            // Body
+            // Body (peasant with simple clothes)
             const body = MeshBuilder.CreateCylinder("body", {
-                height: 0.5,
-                diameter: 0.25,
+                height: 0.6,
+                diameter: 0.3,
                 tessellation: 8
             }, this.scene);
             body.material = teamMaterial;
             body.parent = container;
-            body.position.y = 0.25;
+            body.position.y = 0.3;
 
-            // Cart
+            // Head with simple hat
+            const head = MeshBuilder.CreateSphere("head", {
+                diameter: 0.2,
+                segments: 8
+            }, this.scene);
+            head.material = teamMaterial;
+            head.parent = container;
+            head.position.y = 0.7;
+            head.scaling.y = 0.8; // Slightly squashed sphere
+
+            // Simple hat
+            const hat = MeshBuilder.CreateCylinder("hat", {
+                height: 0.1,
+                diameterTop: 0.1,
+                diameterBottom: 0.2,
+                tessellation: 8
+            }, this.scene);
+            hat.material = leatherMaterial;
+            hat.parent = container;
+            hat.position.y = 0.8;
+
+            // Cart (main body)
             const cart = MeshBuilder.CreateBox("cart", {
-                height: 0.2,
-                width: 0.4,
-                depth: 0.3
+                height: 0.25,
+                width: 0.5,
+                depth: 0.35
             }, this.scene);
             cart.material = leatherMaterial;
             cart.parent = container;
-            cart.position.y = 0.3;
+            cart.position.y = 0.2;
+            cart.position.x = -0.3;
 
-            // Wheels (2 on each side)
-            for (let i = 0; i < 2; i++) {
+            // Cart wheels (2 on each side)
+            [-0.15, 0.15].forEach(zOffset => {
                 const wheel = MeshBuilder.CreateCylinder("wheel", {
                     height: 0.05,
-                    diameter: 0.15,
+                    diameter: 0.2,
                     tessellation: 12
                 }, this.scene);
                 wheel.material = metalMaterial;
                 wheel.parent = cart;
                 wheel.rotation.z = Math.PI / 2;
-                wheel.position.z = i === 0 ? 0.15 : -0.15;
+                wheel.position.z = zOffset;
                 wheel.position.y = -0.1;
-            }
+            });
 
-            // Tools on cart (simplified as boxes)
-            const tools = MeshBuilder.CreateBox("tools", {
-                height: 0.1,
-                width: 0.3,
-                depth: 0.2
+            // Supplies in cart (simplified as boxes)
+            const supplies = [
+                { x: 0, y: 0.15, z: 0, w: 0.3, h: 0.1, d: 0.25 },  // Bottom layer
+                { x: 0, y: 0.25, z: 0, w: 0.2, h: 0.1, d: 0.15 }   // Top layer
+            ];
+
+            supplies.forEach((supply, index) => {
+                const box = MeshBuilder.CreateBox(`supply${index}`, {
+                    height: supply.h,
+                    width: supply.w,
+                    depth: supply.d
+                }, this.scene);
+                box.material = leatherMaterial;
+                box.parent = cart;
+                box.position.set(supply.x, supply.y, supply.z);
+            });
+
+            // Tools (simplified as a shovel)
+            const shovelHandle = MeshBuilder.CreateCylinder("shovelHandle", {
+                height: 0.4,
+                diameter: 0.03,
+                tessellation: 6
             }, this.scene);
-            tools.material = metalMaterial;
-            tools.parent = cart;
-            tools.position.y = 0.1;
+            shovelHandle.material = leatherMaterial;
+            shovelHandle.parent = cart;
+            shovelHandle.position.set(0.2, 0.2, 0);
+            shovelHandle.rotation.z = Math.PI / 4;
+
+            const shovelHead = MeshBuilder.CreateBox("shovelHead", {
+                height: 0.15,
+                width: 0.03,
+                depth: 0.1
+            }, this.scene);
+            shovelHead.material = metalMaterial;
+            shovelHead.parent = shovelHandle;
+            shovelHead.position.y = 0.2;
+            shovelHead.rotation.z = -Math.PI / 4;
         }
 
         // Create a separate container for the health bar that will always face camera
