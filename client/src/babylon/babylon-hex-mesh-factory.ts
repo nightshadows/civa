@@ -1,4 +1,4 @@
-import { Scene, StandardMaterial, Color3, MeshBuilder, TransformNode, Vector3, Material, DynamicTexture, FresnelParameters, Animation } from '@babylonjs/core';
+import { Scene, StandardMaterial, Color3, MeshBuilder, TransformNode, Vector3, Material, DynamicTexture, FresnelParameters, Animation, Mesh } from '@babylonjs/core';
 import { TileType, Position, Unit, UnitType } from '@shared/types';
 
 export class BabylonHexMeshFactory {
@@ -524,6 +524,77 @@ export class BabylonHexMeshFactory {
             tools.position.y = 0.1;
         }
 
+        // Create a separate container for the health bar that will always face camera
+        const healthBarContainer = new TransformNode("healthBarContainer", this.scene);
+        healthBarContainer.parent = container;
+        healthBarContainer.position.y = 1.2;
+
+        const healthBarWidth = 0.4;
+        const healthBarHeight = 0.05;
+        const healthPercent = unit.currentHp / unit.maxHp;
+
+        // Background (red)
+        const healthBg = MeshBuilder.CreatePlane("healthBg", {
+            width: healthBarWidth,
+            height: healthBarHeight
+        }, this.scene);
+        const bgMat = new StandardMaterial("healthBgMat", this.scene);
+        bgMat.diffuseColor = new Color3(1, 0, 0);
+        bgMat.backFaceCulling = false;
+        healthBg.material = bgMat;
+        healthBg.parent = healthBarContainer;
+
+        // Fill (green)
+        const healthFill = MeshBuilder.CreatePlane("healthFill", {
+            width: healthBarWidth * healthPercent,
+            height: healthBarHeight
+        }, this.scene);
+        const fillMat = new StandardMaterial("healthFillMat", this.scene);
+        fillMat.diffuseColor = new Color3(0, 1, 0);
+        fillMat.backFaceCulling = false;
+        healthFill.material = fillMat;
+        healthFill.parent = healthBarContainer;
+        healthFill.position.z = 0.01; // Slightly in front
+
+        // Make health bar always face camera
+        this.scene.onBeforeRenderObservable.add(() => {
+            if (healthBarContainer.isEnabled()) {
+                const camera = this.scene.activeCamera!;
+                if (camera) {
+                    const pos = healthBarContainer.getAbsolutePosition();
+                    const cameraPosition = camera.position;
+                    
+                    // Calculate direction to camera
+                    const direction = cameraPosition.subtract(pos).normalize();
+                    
+                    // Calculate rotation to face camera
+                    const alpha = Math.atan2(direction.x, direction.z);
+                    healthBarContainer.rotation.y = alpha;
+                }
+            }
+        });
+
         return container;
+    }
+
+    updateUnitHealth(unitNode: TransformNode, currentHp: number, maxHp: number): void {
+        // Find the health bar container first
+        const healthBarContainer = unitNode.getChildren().find(child => 
+            child.name === "healthBarContainer"
+        );
+
+        if (healthBarContainer) {
+            // Find the health fill plane within the container
+            const healthFill = healthBarContainer.getChildren().find(child => 
+                child.name === "healthFill"
+            );
+
+            if (healthFill && healthFill instanceof Mesh) {
+                const healthPercent = currentHp / maxHp;
+                healthFill.scaling.x = healthPercent;
+                // Adjust position to keep the bar aligned to the left
+                // healthFill.position.x = (0.4 * (healthPercent - 1)) / 2;
+            }
+        }
     }
 }

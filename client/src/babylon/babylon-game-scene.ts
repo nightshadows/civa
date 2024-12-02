@@ -291,6 +291,15 @@ export class BabylonGameScene {
 
     private handleGameState(state: GameState) {
         this.currentGameState = state;
+        
+        // Update unit health bars
+        state.visibleUnits.forEach(unit => {
+            const unitMesh = this.unitMeshes.get(`unit_${unit.id}`);
+            if (unitMesh) {
+                this.hexMeshFactory.updateUnitHealth(unitMesh, unit.currentHp, unit.maxHp);
+            }
+        });
+
         this.renderMap(state.visibleTiles, state.visibleUnits);
 
         // Update highlight position if there's a selected unit
