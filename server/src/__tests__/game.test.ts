@@ -32,6 +32,7 @@ describe('Game', () => {
     let game: Game;
     beforeEach(() => {
         game = new Game(mapSize, [{id: player1Id, type: PlayerType.HUMAN}], 'test-game', fixedMap);
+        game.init();
     });
 
     describe('Player Management', () => {
