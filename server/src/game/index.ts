@@ -106,7 +106,7 @@ export class Game {
         units.push(archer);
 
         // Create and place settler
-        const settlerPos = findValidSpawnPosition(warriorPos.x, warriorPos.y);
+        const settlerPos = findValidSpawnPosition(warriorPos.x+1, warriorPos.y + 1);
         const settler = createUnit(UnitType.SETTLER, playerId, settlerPos);
         units.push(settler);
 

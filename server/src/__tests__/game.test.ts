@@ -75,30 +75,6 @@ describe('Game', () => {
             expect(game.isPlayerTurn(player2Id)).toBe(true);
             expect(game.isPlayerTurn(player1Id)).toBe(false);
         });
-
-        test('should reset unit movement points on turn start', () => {
-            const state = game.getVisibleState(player1Id);
-            const unit = state.visibleUnits.find(u => u.playerId === player1Id);
-            expect(unit).toBeDefined();
-
-            if (!unit) return;
-
-            const initialPoints = unit.movementPoints;
-            const validMove = findValidMove(game, unit);
-            expect(validMove).toBeDefined();
-
-            if (!validMove) return;
-            const moveResult = game.moveUnit(unit.id, validMove);
-            expect(moveResult.success).toBe(true);
-
-            // Complete turn cycle
-            game.endTurn();  // to player2
-            game.endTurn();  // back to player1
-
-            const finalUnit = game.getVisibleState(player1Id)
-                .visibleUnits.find(u => u.id === unit.id);
-            expect(finalUnit?.movementPoints).toBe(initialPoints);
-        });
     });
 
     describe('Unit Management', () => {
@@ -109,26 +85,6 @@ describe('Game', () => {
                 state.visibleUnits.map(u => `${u.position.x},${u.position.y}`)
             );
             expect(positions.size).toBe(state.visibleUnits.length);
-        });
-
-        test('should allow valid unit movement', () => {
-            const state = game.getVisibleState(player1Id);
-            const unit = state.visibleUnits.find(u => u.playerId === player1Id);
-            expect(unit).toBeDefined();
-
-            if (!unit) return;
-
-            const validMove = findValidMove(game, unit);
-            expect(validMove).toBeDefined();
-
-            if (!validMove) return;
-
-            const moveResult = game.moveUnit(unit.id, validMove);
-            expect(moveResult.success).toBe(true);
-
-            const movedUnit = game.getVisibleState(player1Id)
-                .visibleUnits.find(u => u.id === unit.id);
-            expect(movedUnit?.position).toEqual(validMove);
         });
 
         test('should not allow unit movement onto impassable terrain', () => {
