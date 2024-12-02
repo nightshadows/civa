@@ -23,6 +23,7 @@
     "cookie-parser": "^1.4.7",
     "cors": "^2.8.5",
     "express": "^4.21.1",
+    "openai": "^4.73.1",
     "ts-node": "^10.9.2",
     "typescript": "^5.7.2",
     "ws": "^8.13.0"
